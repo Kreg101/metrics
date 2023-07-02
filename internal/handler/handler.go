@@ -26,7 +26,7 @@ func (mux Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch err {
 	case constants.InvalidRequestError:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	case constants.NoMetricNameError:
 		w.WriteHeader(http.StatusNotFound)
@@ -53,6 +53,9 @@ func NewMux() *Mux {
 
 func requestValidation(split []string) (interface{}, constants.Error) {
 	if len(split) < 3 {
+		return nil, constants.NoMetricNameError
+	}
+	if split[0] != constants.Update {
 		return nil, constants.InvalidRequestError
 	}
 	if (split)[2] == constants.EmptyString {
