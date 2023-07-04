@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/Kreg101/metrics/internal/constants"
-	"github.com/Kreg101/metrics/internal/memory"
+	"github.com/Kreg101/metrics/internal/storage"
 
 	"net/http"
 	"strconv"
@@ -10,7 +10,7 @@ import (
 )
 
 type Mux struct {
-	storage *memory.Storage
+	storage *storage.Storage
 }
 
 func (mux Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +47,7 @@ func (mux Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func NewMux() *Mux {
 	mux := &Mux{}
-	mux.storage = memory.NewStorage()
+	mux.storage = storage.NewStorage()
 	return mux
 }
 
@@ -72,13 +72,13 @@ func requestValidation(split []string) (interface{}, constants.Error) {
 		if err != nil {
 			return nil, constants.InvalidValueError
 		}
-		return memory.Counter(res), constants.NoError
+		return storage.Counter(res), constants.NoError
 	} else {
 		res, err := strconv.ParseFloat(split[3], 64)
 		if err != nil {
 			return nil, constants.InvalidValueError
 		}
-		return memory.Gauge(res), constants.NoError
+		return storage.Gauge(res), constants.NoError
 	}
 }
 

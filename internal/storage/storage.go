@@ -1,4 +1,4 @@
-package memory
+package storage
 
 type Storage struct {
 	metrics *Metrics
