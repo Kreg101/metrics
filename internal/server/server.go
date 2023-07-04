@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/Kreg101/metrics/internal/handler"
+	"github.com/Kreg101/metrics/internal/server/handler"
 	"net/http"
 )
 

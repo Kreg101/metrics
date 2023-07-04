@@ -1,9 +1,8 @@
 package handler
 
 import (
-	"github.com/Kreg101/metrics/internal/constants"
-	"github.com/Kreg101/metrics/internal/storage"
-
+	"github.com/Kreg101/metrics/internal/server/constants"
+	"github.com/Kreg101/metrics/internal/server/storage"
 	"net/http"
 	"strconv"
 	"strings"
