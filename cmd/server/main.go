@@ -1,15 +1,11 @@
 package main
 
-import (
-	"github.com/Kreg101/metrics/internal/handler"
-	"net/http"
-)
+import "github.com/Kreg101/metrics/internal/server"
 
 func main() {
-	
-	mux := handler.NewMux()
-	err := http.ListenAndServe(`:8080`, mux)
 
+	s := server.CreateNewServer()
+	err := s.ListenAndServe(`:8080`)
 	if err != nil {
 		panic(err)
 	}
