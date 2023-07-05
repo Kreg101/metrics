@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 	"time"
@@ -60,6 +61,7 @@ func (a *Agent) Start() {
 			if err != nil {
 				fmt.Println(err)
 			}
+			_, err = io.Copy(io.Discard, resp.Body)
 			defer resp.Body.Close()
 		}
 	}()
