@@ -12,11 +12,10 @@ type Agent struct {
 	sendFreq   time.Duration
 	host       string
 	stats      runtime.MemStats
-	client     http.Client
 }
 
 func NewAgent(update time.Duration, send time.Duration, host string) *Agent {
-	agent := &Agent{updateFreq: update, sendFreq: send, host: host, client: http.Client{}}
+	agent := &Agent{updateFreq: update, sendFreq: send, host: host}
 	return agent
 }
 
@@ -56,7 +55,7 @@ func (a *Agent) Start() {
 	go func() {
 		time.Sleep(a.sendFreq)
 		for k, v := range getMapOfStats(&a.stats) {
-			resp, err := a.client.Post(a.host+"/update/gauge/"+k+"/"+v, "text/plain", nil)
+			resp, err := http.Post(a.host+"/update/gauge/"+k+"/"+v, "text/plain", nil)
 			if err != nil {
 				fmt.Println(err)
 			}

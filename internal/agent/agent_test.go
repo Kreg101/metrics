@@ -2,7 +2,6 @@ package agent
 
 import (
 	"github.com/stretchr/testify/assert"
-	"net/http"
 	"testing"
 	"time"
 )
@@ -13,7 +12,7 @@ func TestNewAgent(t *testing.T) {
 		name string
 		want *Agent
 	}{
-		{name: "basic", want: &Agent{updateFreq: 2 * time.Second, sendFreq: 10 * time.Second, host: "http://localhost", client: http.Client{}}},
+		{name: "basic", want: &Agent{updateFreq: 2 * time.Second, sendFreq: 10 * time.Second, host: "http://localhost"}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
