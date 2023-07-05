@@ -56,10 +56,11 @@ func (a *Agent) Start() {
 	go func() {
 		time.Sleep(a.sendFreq)
 		for k, v := range getMapOfStats(&a.stats) {
-			_, err := a.client.Post(a.host+"/update/gauge/"+k+"/"+v, "text/plain", nil)
+			resp, err := a.client.Post(a.host+"/update/gauge/"+k+"/"+v, "text/plain", nil)
 			if err != nil {
 				fmt.Println(err)
 			}
+			defer resp.Body.Close()
 		}
 	}()
 
