@@ -12,6 +12,12 @@ type Mux struct {
 	storage *storage.Storage
 }
 
+func NewMux() *Mux {
+	mux := &Mux{}
+	mux.storage = storage.NewStorage()
+	return mux
+}
+
 func (mux Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -19,35 +25,21 @@ func (mux Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	split := strings.Split(r.RequestURI, "/")
-	split = removeFirstLastElements(split)
+	split = removeFirstLastEmptyElements(split)
 
 	res, err := requestValidation(split)
 
-	switch err {
-	case constants.InvalidRequestError:
+	if err == constants.InvalidRequestError || err == constants.InvalidMetricTypeError || err == constants.InvalidValueError {
 		w.WriteHeader(http.StatusBadRequest)
 		return
-	case constants.NoMetricNameError:
+	} else if err == constants.NoMetricNameError {
 		w.WriteHeader(http.StatusNotFound)
-		return
-	case constants.InvalidMetricTypeError:
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	case constants.InvalidValueError:
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	mux.storage.Add(split[2], res)
-
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
-}
-
-func NewMux() *Mux {
-	mux := &Mux{}
-	mux.storage = storage.NewStorage()
-	return mux
 }
 
 func requestValidation(split []string) (interface{}, constants.Error) {
@@ -57,7 +49,7 @@ func requestValidation(split []string) (interface{}, constants.Error) {
 	if split[0] != constants.Update {
 		return nil, constants.InvalidRequestError
 	}
-	if (split)[2] == constants.EmptyString {
+	if split[2] == constants.EmptyString {
 		return nil, constants.NoMetricNameError
 	}
 	if len(split) != 4 {
@@ -81,7 +73,7 @@ func requestValidation(split []string) (interface{}, constants.Error) {
 	}
 }
 
-func removeFirstLastElements(split []string) []string {
+func removeFirstLastEmptyElements(split []string) []string {
 	if (split)[0] == "" {
 		split = (split)[1:]
 	}
