@@ -1,8 +1,5 @@
 package agent
 
-//нужно написать функцию, которая из stats будет делать необходимую мне мапу
-// дальше по этой мапе итерироваться и делать что захочу
-
 import (
 	"fmt"
 	"net/http"
@@ -27,7 +24,7 @@ func (a *Agent) readStats() {
 	runtime.ReadMemStats(&a.stats)
 }
 
-func getMapOfStats(stats *runtime.MemStats) *map[string]string {
+func getMapOfStats(stats *runtime.MemStats) map[string]string {
 	res := make(map[string]string)
 	res["Alloc"] = fmt.Sprintf("%f", float64(stats.Alloc))
 	res["BuckHashSys"] = fmt.Sprintf("%f", float64(stats.BuckHashSys))
@@ -56,13 +53,13 @@ func getMapOfStats(stats *runtime.MemStats) *map[string]string {
 	res["StackSys"] = fmt.Sprintf("%f", float64(stats.StackSys))
 	res["Sys"] = fmt.Sprintf("%f", float64(stats.Sys))
 	res["TotalAlloc"] = fmt.Sprintf("%f", float64(stats.TotalAlloc))
-	return &res
+	return res
 }
 
 func (a *Agent) Start() {
 	go func() {
 		time.Sleep(a.sendFreq)
-		for k, v := range *getMapOfStats(&a.stats) {
+		for k, v := range getMapOfStats(&a.stats) {
 			_, err := a.client.Post(a.host+"/update/gauge/"+k+"/"+v, "text/plain", nil)
 			if err != nil {
 				fmt.Println(err)

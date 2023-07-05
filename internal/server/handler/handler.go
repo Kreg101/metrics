@@ -19,7 +19,7 @@ func (mux Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	split := strings.Split(r.RequestURI, "/")
-	removeEmptyElements(&split)
+	split = removeFirstLastElements(split)
 
 	res, err := requestValidation(split)
 
@@ -81,11 +81,12 @@ func requestValidation(split []string) (interface{}, constants.Error) {
 	}
 }
 
-func removeEmptyElements(split *[]string) {
-	if (*split)[0] == "" {
-		*split = (*split)[1:]
+func removeFirstLastElements(split []string) []string {
+	if (split)[0] == "" {
+		split = (split)[1:]
 	}
-	if (*split)[len(*split)-1] == "" {
-		*split = (*split)[:len(*split)-1]
+	if (split)[len(split)-1] == "" {
+		split = (split)[:len(split)-1]
 	}
+	return split
 }
