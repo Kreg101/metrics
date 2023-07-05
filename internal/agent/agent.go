@@ -20,10 +20,6 @@ func NewAgent(update time.Duration, send time.Duration, host string) *Agent {
 	return agent
 }
 
-func (a *Agent) readStats() {
-	runtime.ReadMemStats(&a.stats)
-}
-
 func getMapOfStats(stats *runtime.MemStats) map[string]string {
 	res := make(map[string]string)
 	res["Alloc"] = fmt.Sprintf("%f", float64(stats.Alloc))
@@ -68,7 +64,7 @@ func (a *Agent) Start() {
 	}()
 
 	for {
-		a.readStats()
+		runtime.ReadMemStats(&a.stats)
 		time.Sleep(a.updateFreq)
 	}
 }
