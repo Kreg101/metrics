@@ -22,14 +22,12 @@ func NewStorage() *Storage {
 }
 
 func (s *Storage) Add(key string, value interface{}) {
-	//fmt.Println(key, " ", value)
 	switch v := value.(type) {
-	case Counter:
-		fmt.Println("i'm here")
-		(*s.metrics)[key] = v
 	case Gauge:
+		(*s.metrics)[key] = v
+	case Counter:
 		if val, ok := (*s.metrics)[key]; ok {
-			(*s.metrics)[key] = val.(Gauge) + v
+			(*s.metrics)[key] = val.(Counter) + v
 		} else {
 			(*s.metrics)[key] = v
 		}
@@ -44,7 +42,7 @@ func (s *Storage) GetAllString() string {
 		var keyValue = k + ":"
 		switch res := v.(type) {
 		case Gauge:
-			keyValue += fmt.Sprintf("%f", res)
+			keyValue += fmt.Sprintf("%.3f", res)
 		case Counter:
 			keyValue += fmt.Sprintf("%d", res)
 		}
@@ -57,7 +55,7 @@ func (s *Storage) GetString(name string) (string, bool) {
 	if v, ok := (*s.metrics)[name]; ok {
 		switch x := v.(type) {
 		case Gauge:
-			return fmt.Sprintf("%f", x), ok
+			return fmt.Sprintf("%.3f", x), ok
 		case Counter:
 			return fmt.Sprintf("%d", x), ok
 		}
