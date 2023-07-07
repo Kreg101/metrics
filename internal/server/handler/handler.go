@@ -25,16 +25,16 @@ func (mux *Mux) Apply() chi.Router {
 	mux.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "text/html")
-		w.Write([]byte(mux.storage.GetAll()))
+		w.Write([]byte(mux.storage.GetAllString()))
 	})
 
 	mux.router.Get("/value/{type}/{name}", func(w http.ResponseWriter, r *http.Request) {
-		name := chi.URLParam(r, "type")
-		if v, ok := mux.storage.Get(name); ok {
+		name := chi.URLParam(r, "name")
+		if v, ok := mux.storage.GetString(name); ok {
 			if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("content-type", "text/html")
-				w.Write([]byte(name + ":" + v.(string)))
+				w.Write([]byte(name + ":" + v))
 				return
 			}
 		}
@@ -42,7 +42,6 @@ func (mux *Mux) Apply() chi.Router {
 	})
 
 	mux.router.Post("/update/{type}/{name}/{value}", func(w http.ResponseWriter, r *http.Request) {
-
 		if chi.URLParam(r, "name") == constants.EmptyString {
 			w.WriteHeader(http.StatusNotFound)
 			return

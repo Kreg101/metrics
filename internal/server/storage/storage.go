@@ -25,6 +25,7 @@ func (s *Storage) Add(key string, value interface{}) {
 	//fmt.Println(key, " ", value)
 	switch v := value.(type) {
 	case Counter:
+		fmt.Println("i'm here")
 		(*s.metrics)[key] = v
 	case Gauge:
 		if val, ok := (*s.metrics)[key]; ok {
@@ -36,7 +37,7 @@ func (s *Storage) Add(key string, value interface{}) {
 }
 
 // GetAll I should read about string.Builder
-func (s *Storage) GetAll() string {
+func (s *Storage) GetAllString() string {
 	fmt.Println(len(*s.metrics))
 	list := make([]string, 0)
 	for k, v := range *s.metrics {
@@ -52,12 +53,16 @@ func (s *Storage) GetAll() string {
 	return strings.Join(list, ", ")
 }
 
-func (s *Storage) Get(name string) (interface{}, bool) {
-	value, err := (*s.metrics)[name]
-	if err {
-		return nil, false
+func (s *Storage) GetString(name string) (string, bool) {
+	if v, ok := (*s.metrics)[name]; ok {
+		switch x := v.(type) {
+		case Gauge:
+			return fmt.Sprintf("%f", x), ok
+		case Counter:
+			return fmt.Sprintf("%d", x), ok
+		}
 	}
-	return value, true
+	return "", false
 }
 
 func (s *Storage) CheckType(name string) string {
