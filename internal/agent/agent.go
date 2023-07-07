@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
@@ -50,10 +51,12 @@ func getMapOfStats(stats *runtime.MemStats) map[string]string {
 	res["StackSys"] = fmt.Sprintf("%f", float64(stats.StackSys))
 	res["Sys"] = fmt.Sprintf("%f", float64(stats.Sys))
 	res["TotalAlloc"] = fmt.Sprintf("%f", float64(stats.TotalAlloc))
+	res["RandomValue"] = fmt.Sprintf("%f", rand.Float64())
 	return res
 }
 
 func (a *Agent) Start() {
+	var pollCount int
 	go func() {
 		time.Sleep(a.sendFreq)
 		for k, v := range getMapOfStats(&a.stats) {
@@ -62,12 +65,21 @@ func (a *Agent) Start() {
 				fmt.Println(err)
 			}
 			_, err = io.Copy(io.Discard, resp.Body)
+			if err != nil {
+				fmt.Println(err)
+			}
 			defer resp.Body.Close()
 		}
+		_, err := a.client.Post(a.host+"/update/counter/PollCount/"+fmt.Sprintf("%d", pollCount), "text/plain", nil)
+		if err != nil {
+			fmt.Println(err)
+		}
+		//fmt.Println("i'm here")
 	}()
 
 	for {
 		runtime.ReadMemStats(&a.stats)
 		time.Sleep(a.updateFreq)
+		pollCount++
 	}
 }

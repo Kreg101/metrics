@@ -17,5 +17,5 @@ func CreateNewServer() *Server {
 }
 
 func (s *Server) ListenAndServe(addr string) error {
-	return http.ListenAndServe(addr, s.mux)
+	return http.ListenAndServe(addr, s.mux.Apply())
 }
