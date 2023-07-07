@@ -34,7 +34,7 @@ func (mux *Mux) Apply() chi.Router {
 			if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("content-type", "text/html")
-				w.Write([]byte(name + ":" + v))
+				w.Write([]byte(v))
 				return
 			}
 		}
