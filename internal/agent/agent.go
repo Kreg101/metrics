@@ -70,10 +70,11 @@ func (a *Agent) Start() {
 			}
 			defer resp.Body.Close()
 		}
-		_, err := a.client.Post(a.host+"/update/counter/PollCount/"+fmt.Sprintf("%d", pollCount), "text/plain", nil)
+		resp, err := a.client.Post(a.host+"/update/counter/PollCount/"+fmt.Sprintf("%d", pollCount), "text/plain", nil)
 		if err != nil {
 			fmt.Println(err)
 		}
+		defer resp.Body.Close()
 		//fmt.Println("i'm here")
 	}()
 
