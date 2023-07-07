@@ -1,4 +1,5 @@
-//package handler
+package handler
+
 //
 //import (
 //	"github.com/Kreg101/metrics/internal/server/constants"
