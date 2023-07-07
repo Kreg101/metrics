@@ -26,7 +26,6 @@ func (mux *Mux) Apply() chi.Router {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "text/html")
 		w.Write([]byte(mux.storage.GetAll()))
-		return
 	})
 
 	mux.router.Get("/value/{type}/{name}", func(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +39,6 @@ func (mux *Mux) Apply() chi.Router {
 			}
 		}
 		w.WriteHeader(http.StatusNotFound)
-		return
 	})
 
 	mux.router.Post("/update/{type}/{name}/{value}", func(w http.ResponseWriter, r *http.Request) {
