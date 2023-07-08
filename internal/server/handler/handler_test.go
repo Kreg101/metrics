@@ -78,7 +78,7 @@ func Test_metricsToString(t *testing.T) {
 		want   string
 	}{
 		{name: "single counter metric", source: storage.Metrics{"x": storage.Counter(1)}, want: "x:1"},
-		{name: "single gauge metric", source: storage.Metrics{"x": storage.Gauge(1.34)}, want: "x:1.340"},
+		{name: "single gauge metric", source: storage.Metrics{"x": storage.Gauge(1.340)}, want: "x:1.34"},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -94,7 +94,7 @@ func Test_singleMetricToString(t *testing.T) {
 		want   string
 	}{
 		{name: "counter metric", source: storage.Counter(1), want: "1"},
-		{name: "gauge metric", source: storage.Gauge(1.34), want: "1.340"},
+		{name: "gauge metric", source: storage.Gauge(1.34), want: "1.34"},
 		{name: "invalid type metric", source: 2, want: ""},
 	}
 	for _, tc := range tt {

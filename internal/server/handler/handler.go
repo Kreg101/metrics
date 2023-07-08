@@ -87,7 +87,7 @@ func metricsToString(m storage.Metrics) string {
 		var keyValue = k + ":"
 		switch res := v.(type) {
 		case storage.Gauge:
-			keyValue += fmt.Sprintf("%.3f", res)
+			keyValue += float2String(float64(res))
 		case storage.Counter:
 			keyValue += fmt.Sprintf("%d", res)
 		}
