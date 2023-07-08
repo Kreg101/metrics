@@ -1,12 +1,18 @@
 package main
 
-import "flag"
+import (
+	"flag"
+	"os"
+)
 
 var (
-	endpoint string
+	flagEndpoint string
 )
 
 func parseFlags() {
-	flag.StringVar(&endpoint, "a", ":8080", "address and port to run server")
+	flag.StringVar(&flagEndpoint, "a", ":8080", "address and port to run server")
 	flag.Parse()
+	if envEndpoint := os.Getenv("ADDRESS"); envEndpoint != "" {
+		flagEndpoint = envEndpoint
+	}
 }
