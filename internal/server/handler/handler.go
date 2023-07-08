@@ -74,7 +74,7 @@ func updateMetric(mux *Mux) {
 	})
 }
 
-func (mux *Mux) Apply() chi.Router {
+func (mux *Mux) Router() chi.Router {
 	mainPage(mux)
 	metricPage(mux)
 	updateMetric(mux)
