@@ -17,7 +17,7 @@ func TestNewAgent(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			newAgent := NewAgent(2*time.Second, 10*time.Second, "http://localhost")
+			newAgent := NewAgent(2, 10, "http://localhost")
 			newAgent.client = &resty.Client{}
 			assert.Equal(t, tc.want, newAgent)
 		})
