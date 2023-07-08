@@ -1,35 +1,31 @@
 package handler
 
-//
-//import (
-//	"github.com/Kreg101/metrics/internal/server/constants"
-//	"github.com/Kreg101/metrics/internal/server/storage"
-//	"github.com/stretchr/testify/assert"
-//	"github.com/stretchr/testify/require"
-//	"io"
-//	"net/http"
-//	"net/http/httptest"
-//	"testing"
-//)
-//
-//func TestNewMux(t *testing.T) {
-//	tt := []struct {
-//		name     string
-//		expected *Mux
-//	}{
-//		{
-//			name: "basic", expected: &Mux{storage: storage.NewStorage()},
-//		},
-//	}
-//
-//	for _, tc := range tt {
-//		t.Run(tc.name, func(t *testing.T) {
-//			assert.Equal(t, tc.expected, NewMux())
-//		})
-//	}
-//}
-//
-//// нужно вернуться в эту фунцию и проверить, что в storage попадают корректные значения
+import (
+	"github.com/Kreg101/metrics/internal/server/storage"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestNewMux(t *testing.T) {
+	tt := []struct {
+		name     string
+		expected *Mux
+	}{
+		{
+			name: "default constructor", expected: &Mux{storage: storage.NewStorage()},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			mux := NewMux()
+			mux.router = nil
+			assert.Equal(t, tc.expected, mux)
+		})
+	}
+}
+
+// нужно вернуться в эту фунцию и проверить, что в storage попадают корректные значения
 //func TestMux_ServeHTTP(t *testing.T) {
 //	type want struct {
 //		code        int
@@ -74,51 +70,36 @@ package handler
 //		})
 //	}
 //}
-//
-//func Test_removeFirstLastEmptyElements(t *testing.T) {
-//	tt := []struct {
-//		name     string
-//		data     []string
-//		expected []string
-//	}{
-//		{name: "nothing to do", data: []string{"abc", "bc", "d"}, expected: []string{"abc", "bc", "d"}},
-//		{name: "remove only first elem", data: []string{"", "a", "b"}, expected: []string{"a", "b"}},
-//		{name: "remove only last elem", data: []string{"a", "b", ""}, expected: []string{"a", "b"}},
-//		{name: "remove first and last elem", data: []string{"", "b", ""}, expected: []string{"b"}},
-//	}
-//	for _, tc := range tt {
-//		t.Run(tc.name, func(t *testing.T) {
-//			assert.Equal(t, tc.expected, removeFirstLastEmptyElements(tc.data))
-//		})
-//	}
-//}
-//
-//func Test_requestValidation(t *testing.T) {
-//	type answer struct {
-//		inter interface{}
-//		err   constants.Error
-//	}
-//	tt := []struct {
-//		name     string
-//		data     []string
-//		expected answer
-//	}{
-//		{name: "no metric name", data: []string{"update", "counter"}, expected: answer{nil, constants.NoMetricNameError}},
-//		{name: "no update in request", data: []string{"ha", "counter", "fun", "10"}, expected: answer{nil, constants.InvalidRequestError}},
-//		{name: "metric name is empty", data: []string{"update", "counter", "", "10"}, expected: answer{nil, constants.NoMetricNameError}},
-//		{name: "wrong length of request", data: []string{"update", "counter", "mem", "10", "x"}, expected: answer{nil, constants.InvalidRequestError}},
-//		{name: "invalid metric type", data: []string{"update", "counte", "ha", "0"}, expected: answer{nil, constants.InvalidMetricTypeError}},
-//		{name: "no metric name", data: []string{"update", "counter"}, expected: answer{nil, constants.NoMetricNameError}},
-//		{name: "invalid value type #1", data: []string{"update", "counter", "x", "1.00"}, expected: answer{nil, constants.InvalidValueError}},
-//		{name: "invalid value type #2", data: []string{"update", "gauge", "x", "abc"}, expected: answer{nil, constants.InvalidValueError}},
-//		{name: "correct counter request", data: []string{"update", "counter", "x", "1"}, expected: answer{storage.Counter(1), constants.NoError}},
-//		{name: "correct gauge request", data: []string{"update", "gauge", "x", "1.0"}, expected: answer{storage.Gauge(1.0), constants.NoError}},
-//	}
-//	for _, tc := range tt {
-//		t.Run(tc.name, func(t *testing.T) {
-//			ans, err := requestValidation(tc.data)
-//			require.Equal(t, tc.expected.err, err, err)
-//			assert.Equal(t, tc.expected.inter, ans)
-//		})
-//	}
-//}
+
+func Test_metricsToString(t *testing.T) {
+	tt := []struct {
+		name   string
+		source storage.Metrics
+		want   string
+	}{
+		{name: "single counter metric", source: storage.Metrics{"x": storage.Counter(1)}, want: "x:1"},
+		{name: "single gauge metric", source: storage.Metrics{"x": storage.Gauge(1.34)}, want: "x:1.340"},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, metricsToString(tc.source))
+		})
+	}
+}
+
+func Test_singleMetricToString(t *testing.T) {
+	tt := []struct {
+		name   string
+		source interface{}
+		want   string
+	}{
+		{name: "counter metric", source: storage.Counter(1), want: "1"},
+		{name: "gauge metric", source: storage.Gauge(1.34), want: "1.340"},
+		{name: "invalid type metric", source: 2, want: ""},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, singleMetricToString(tc.source))
+		})
+	}
+}

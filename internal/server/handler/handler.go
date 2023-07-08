@@ -22,13 +22,15 @@ func NewMux() *Mux {
 	return mux
 }
 
-func (mux *Mux) Apply() chi.Router {
+func mainPage(mux *Mux) {
 	mux.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "text/html")
 		w.Write([]byte(metricsToString(mux.storage.GetAll())))
 	})
+}
 
+func metricPage(mux *Mux) {
 	mux.router.Get("/value/{type}/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "name")
 		if v, ok := mux.storage.Get(name); ok {
@@ -41,7 +43,9 @@ func (mux *Mux) Apply() chi.Router {
 		}
 		w.WriteHeader(http.StatusNotFound)
 	})
+}
 
+func updateMetric(mux *Mux) {
 	mux.router.Post("/update/{type}/{name}/{value}", func(w http.ResponseWriter, r *http.Request) {
 		if chi.URLParam(r, "name") == constants.EmptyString {
 			w.WriteHeader(http.StatusNotFound)
@@ -67,6 +71,12 @@ func (mux *Mux) Apply() chi.Router {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 	})
+}
+
+func (mux *Mux) Apply() chi.Router {
+	mainPage(mux)
+	metricPage(mux)
+	updateMetric(mux)
 	return mux.router
 }
 

@@ -37,15 +37,6 @@ func (s *Storage) GetAll() Metrics {
 }
 
 func (s *Storage) Get(name string) (interface{}, bool) {
-	//if v, ok := (*s.metrics)[name]; ok {
-	//	switch x := v.(type) {
-	//	case Gauge:
-	//		return fmt.Sprintf("%.3f", x), ok
-	//	case Counter:
-	//		return fmt.Sprintf("%d", x), ok
-	//	}
-	//}
-	//return "", false
 	if v, ok := (*s.metrics)[name]; ok {
 		return v, ok
 	}
@@ -60,4 +51,13 @@ func (s *Storage) CheckType(name string) string {
 		return constants.CounterType
 	}
 	return ""
+}
+
+func createStorageFromMap(m map[string]interface{}) *Storage {
+	s := &Storage{}
+	s.metrics = &Metrics{}
+	for k, v := range m {
+		(*s.metrics)[k] = v
+	}
+	return s
 }
