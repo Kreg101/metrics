@@ -5,6 +5,7 @@ import (
 	"github.com/Kreg101/metrics/internal/server/constants"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -98,9 +99,16 @@ func metricsToString(m storage.Metrics) string {
 func singleMetricToString(v interface{}) string {
 	switch x := v.(type) {
 	case storage.Gauge:
-		return fmt.Sprintf("%.3f", x)
+		return float2String(float64(x))
 	case storage.Counter:
 		return fmt.Sprintf("%d", x)
 	}
 	return ""
+}
+
+func float2String(x float64) string {
+	if math.Trunc(x) == x {
+		return fmt.Sprintf("%.0f", x)
+	}
+	return strings.TrimRight(fmt.Sprintf("%.3f", x), "0")
 }
