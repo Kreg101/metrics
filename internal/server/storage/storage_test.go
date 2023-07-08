@@ -59,3 +59,24 @@ func TestStorage_Add(t *testing.T) {
 		})
 	}
 }
+
+func TestStorage_GetAllString(t *testing.T) {
+
+	tt := []struct {
+		name string
+		base map[string]interface{}
+		want Metrics
+	}{
+		{name: "basis test #1", base: map[string]interface{}{"key": Counter(1)}, want: Metrics{"key": Counter(1)}},
+		{name: "basis test #2", base: map[string]interface{}{"key": Gauge(1.23)}, want: Metrics{"key": Gauge(1.23)}},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			s := NewStorage()
+			for k, v := range tc.base {
+				s.Add(k, v)
+			}
+			assert.Equal(t, tc.want, s.GetAll())
+		})
+	}
+}

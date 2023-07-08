@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type Mux struct {
@@ -25,16 +26,16 @@ func (mux *Mux) Apply() chi.Router {
 	mux.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "text/html")
-		w.Write([]byte(mux.storage.GetAllString()))
+		w.Write([]byte(metricsToString(mux.storage.GetAll())))
 	})
 
 	mux.router.Get("/value/{type}/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "name")
-		if v, ok := mux.storage.GetString(name); ok {
+		if v, ok := mux.storage.Get(name); ok {
 			if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("content-type", "text/html")
-				w.Write([]byte(v))
+				w.Write([]byte(singleMetricToString(v)))
 				return
 			}
 		}
@@ -67,4 +68,29 @@ func (mux *Mux) Apply() chi.Router {
 		}
 	})
 	return mux.router
+}
+
+func metricsToString(m storage.Metrics) string {
+	list := make([]string, 0)
+	for k, v := range m {
+		var keyValue = k + ":"
+		switch res := v.(type) {
+		case storage.Gauge:
+			keyValue += fmt.Sprintf("%.3f", res)
+		case storage.Counter:
+			keyValue += fmt.Sprintf("%d", res)
+		}
+		list = append(list, keyValue)
+	}
+	return strings.Join(list, ", ")
+}
+
+func singleMetricToString(v interface{}) string {
+	switch x := v.(type) {
+	case storage.Gauge:
+		return fmt.Sprintf("%.3f", x)
+	case storage.Counter:
+		return fmt.Sprintf("%d", x)
+	}
+	return ""
 }
