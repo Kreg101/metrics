@@ -2,9 +2,8 @@ package agent
 
 import (
 	"fmt"
-	"io"
+	"github.com/go-resty/resty/v2"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"time"
 )
@@ -14,11 +13,11 @@ type Agent struct {
 	sendFreq   time.Duration
 	host       string
 	stats      runtime.MemStats
-	client     http.Client
+	client     *resty.Client
 }
 
 func NewAgent(update time.Duration, send time.Duration, host string) *Agent {
-	agent := &Agent{updateFreq: update, sendFreq: send, host: host, client: http.Client{}}
+	agent := &Agent{updateFreq: update, sendFreq: send, host: host, client: resty.New()}
 	return agent
 }
 
@@ -58,29 +57,24 @@ func getMapOfStats(stats *runtime.MemStats) map[string]string {
 func (a *Agent) Start() {
 	var pollCount int
 	go func() {
-		time.Sleep(a.sendFreq)
-		for k, v := range getMapOfStats(&a.stats) {
-			resp, err := a.client.Post(a.host+"/update/gauge/"+k+"/"+v, "text/plain", nil)
+		for {
+			time.Sleep(a.sendFreq)
+			for k, v := range getMapOfStats(&a.stats) {
+				_, err := a.client.R().Post(a.host + "/update/gauge/" + k + "/" + v)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+			_, err := a.client.R().Post(a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount))
 			if err != nil {
 				fmt.Println(err)
 			}
-			_, err = io.Copy(io.Discard, resp.Body)
-			if err != nil {
-				fmt.Println(err)
-			}
-			defer resp.Body.Close()
 		}
-		resp, err := a.client.Post(a.host+"/update/counter/PollCount/"+fmt.Sprintf("%d", pollCount), "text/plain", nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer resp.Body.Close()
-		//fmt.Println("i'm here")
 	}()
 
 	for {
 		runtime.ReadMemStats(&a.stats)
-		time.Sleep(a.updateFreq)
 		pollCount++
+		time.Sleep(a.updateFreq)
 	}
 }

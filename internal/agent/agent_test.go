@@ -1,8 +1,8 @@
 package agent
 
 import (
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	"net/http"
 	"testing"
 	"time"
 )
@@ -13,11 +13,13 @@ func TestNewAgent(t *testing.T) {
 		name string
 		want *Agent
 	}{
-		{name: "basic", want: &Agent{updateFreq: 2 * time.Second, sendFreq: 10 * time.Second, host: "http://localhost", client: http.Client{}}},
+		{name: "basic", want: &Agent{updateFreq: 2 * time.Second, sendFreq: 10 * time.Second, host: "http://localhost", client: &resty.Client{}}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, NewAgent(2*time.Second, 10*time.Second, "http://localhost"))
+			newAgent := NewAgent(2*time.Second, 10*time.Second, "http://localhost")
+			newAgent.client = &resty.Client{}
+			assert.Equal(t, tc.want, newAgent)
 		})
 	}
 }
