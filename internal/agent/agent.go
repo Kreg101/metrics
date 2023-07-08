@@ -16,8 +16,8 @@ type Agent struct {
 	client     *resty.Client
 }
 
-func NewAgent(update time.Duration, send time.Duration, host string) *Agent {
-	agent := &Agent{updateFreq: update, sendFreq: send, host: host, client: resty.New()}
+func NewAgent(update int, send int, host string) *Agent {
+	agent := &Agent{updateFreq: time.Duration(update) * time.Second, sendFreq: time.Duration(send) * time.Second, host: host, client: resty.New()}
 	return agent
 }
 
@@ -69,10 +69,12 @@ func (a *Agent) Start() {
 			if err != nil {
 				fmt.Println(err)
 			}
+			fmt.Println("send")
 		}
 	}()
 
 	for {
+		fmt.Println("update")
 		runtime.ReadMemStats(&a.stats)
 		pollCount++
 		time.Sleep(a.updateFreq)
