@@ -1,9 +1,5 @@
 package storage
 
-import (
-	"github.com/Kreg101/metrics/internal/server/constants"
-)
-
 type Gauge float64
 type Counter int64
 
@@ -24,8 +20,8 @@ func (s *Storage) Add(key string, value interface{}) {
 	case Gauge:
 		(*s.metrics)[key] = v
 	case Counter:
-		if val, ok := (*s.metrics)[key]; ok {
-			(*s.metrics)[key] = val.(Counter) + v
+		if val, ok := (*s.metrics)[key]; ok { // if value of counter type is already in metrics
+			(*s.metrics)[key] = val.(Counter) + v // we should update it
 		} else {
 			(*s.metrics)[key] = v
 		}
@@ -43,21 +39,14 @@ func (s *Storage) Get(name string) (interface{}, bool) {
 	return nil, false
 }
 
+// CheckType returns string, because it's easier to compare result with pattern
+// in handler's functions
 func (s *Storage) CheckType(name string) string {
 	switch (*s.metrics)[name].(type) {
 	case Gauge:
-		return constants.GaugeType
+		return "gauge"
 	case Counter:
-		return constants.CounterType
+		return "counter"
 	}
 	return ""
-}
-
-func createStorageFromMap(m map[string]interface{}) *Storage {
-	s := &Storage{}
-	s.metrics = &Metrics{}
-	for k, v := range m {
-		(*s.metrics)[k] = v
-	}
-	return s
 }

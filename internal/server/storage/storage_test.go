@@ -1,11 +1,19 @@
 package storage
 
 import (
-	"github.com/Kreg101/metrics/internal/server/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
+func createStorageFromMap(m map[string]interface{}) *Storage {
+	s := &Storage{}
+	s.metrics = &Metrics{}
+	for k, v := range m {
+		(*s.metrics)[k] = v
+	}
+	return s
+}
 
 func TestNewStorage(t *testing.T) {
 	tt := []struct {
@@ -82,6 +90,8 @@ func TestStorage_GetAll(t *testing.T) {
 	}{
 		{name: "basis test #1", base: map[string]interface{}{"key": Counter(1)}, want: Metrics{"key": Counter(1)}},
 		{name: "basis test #2", base: map[string]interface{}{"key": Gauge(1.23)}, want: Metrics{"key": Gauge(1.23)}},
+		{name: "more elements", base: map[string]interface{}{"x": Gauge(1.23), "y": Counter(2), "z": Counter(-1)},
+			want: Metrics{"x": Gauge(1.23), "y": Counter(2), "z": Counter(-1)}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -122,8 +132,8 @@ func TestStorage_CheckType(t *testing.T) {
 		key    string
 		want   string
 	}{
-		{name: "counter value in storage", source: map[string]interface{}{"x": Counter(1), "y": Gauge(2.0)}, key: "x", want: constants.CounterType},
-		{name: "gauge value in storage", source: map[string]interface{}{"x": Counter(1), "y": Gauge(2.0)}, key: "y", want: constants.GaugeType},
+		{name: "counter value in storage", source: map[string]interface{}{"x": Counter(1), "y": Gauge(2.0)}, key: "x", want: "counter"},
+		{name: "gauge value in storage", source: map[string]interface{}{"x": Counter(1), "y": Gauge(2.0)}, key: "y", want: "gauge"},
 		{name: "value is not in storage", source: map[string]interface{}{}, key: "x", want: ""},
 	}
 	for _, tc := range tt {

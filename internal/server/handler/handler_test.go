@@ -17,7 +17,6 @@ func TestNewMux(t *testing.T) {
 	}{
 		{name: "default constructor", expected: &Mux{storage: storage.NewStorage()}},
 	}
-
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			mux := NewMux()
@@ -27,6 +26,8 @@ func TestNewMux(t *testing.T) {
 	}
 }
 
+// I can't test this function with multiple values
+// because the order of elements in map is variable
 func Test_metricsToString(t *testing.T) {
 	tt := []struct {
 		name   string
@@ -107,16 +108,26 @@ func TestMux_Router(t *testing.T) {
 		want   response
 	}{
 		{name: "main page", url: "/", method: http.MethodGet, want: response{statusCode: 200, body: ""}},
-		{name: "correct update counter request", url: "/update/counter/x/10", method: http.MethodPost, want: response{http.StatusOK, ""}},
-		{name: "correct update gauge request", url: "/update/gauge/y/1.23", method: http.MethodPost, want: response{http.StatusOK, ""}},
-		{name: "no metric name in update request #1", url: "/update/counter//10", method: http.MethodPost, want: response{http.StatusNotFound, ""}},
-		{name: "no metric name in update request #2", url: "/update/counter", method: http.MethodPost, want: response{http.StatusNotFound, "404 page not found\n"}},
-		{name: "invalid counter type value", url: "/update/counter/x/abc", method: http.MethodPost, want: response{http.StatusBadRequest, ""}},
-		{name: "invalid gauge type value", url: "/update/counter/x/abc", method: http.MethodPost, want: response{http.StatusBadRequest, ""}},
-		{name: "invalid metric type", url: "/update/counte/x/abc", method: http.MethodPost, want: response{http.StatusBadRequest, ""}},
-		{name: "single metric request", url: "/value/counter/x", method: http.MethodGet, want: response{statusCode: http.StatusOK, body: "10"}},
-		{name: "invalid metric type request", url: "/value/cor/x", method: http.MethodGet, want: response{statusCode: http.StatusNotFound, body: ""}},
-		{name: "no metric in storage", url: "/value/counter/z", method: http.MethodGet, want: response{statusCode: http.StatusNotFound, body: ""}},
+		{name: "correct update counter request", url: "/update/counter/x/10", method: http.MethodPost,
+			want: response{http.StatusOK, ""}},
+		{name: "correct update gauge request", url: "/update/gauge/y/1.23", method: http.MethodPost,
+			want: response{http.StatusOK, ""}},
+		{name: "no metric name in update request #1", url: "/update/counter//10", method: http.MethodPost,
+			want: response{http.StatusNotFound, ""}},
+		{name: "no metric name in update request #2", url: "/update/counter", method: http.MethodPost,
+			want: response{http.StatusNotFound, "404 page not found\n"}},
+		{name: "invalid counter type value", url: "/update/counter/x/abc", method: http.MethodPost,
+			want: response{http.StatusBadRequest, ""}},
+		{name: "invalid gauge type value", url: "/update/counter/x/abc", method: http.MethodPost,
+			want: response{http.StatusBadRequest, ""}},
+		{name: "invalid metric type", url: "/update/counte/x/abc", method: http.MethodPost,
+			want: response{http.StatusBadRequest, ""}},
+		{name: "single metric request", url: "/value/counter/x", method: http.MethodGet,
+			want: response{statusCode: http.StatusOK, body: "10"}},
+		{name: "invalid metric type request", url: "/value/cor/x", method: http.MethodGet,
+			want: response{statusCode: http.StatusNotFound, body: ""}},
+		{name: "no metric in storage", url: "/value/counter/z", method: http.MethodGet,
+			want: response{statusCode: http.StatusNotFound, body: ""}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {

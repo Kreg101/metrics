@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"github.com/Kreg101/metrics/internal/server/constants"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 	"math"
@@ -11,8 +10,15 @@ import (
 	"strings"
 )
 
+type Repository interface {
+	Add(key string, value interface{})
+	GetAll() storage.Metrics
+	Get(name string) (interface{}, bool)
+	CheckType(name string) string
+}
+
 type Mux struct {
-	storage *storage.Storage
+	storage Repository
 	router  chi.Router
 }
 
@@ -23,16 +29,16 @@ func NewMux() *Mux {
 	return mux
 }
 
-func mainPage(mux *Mux) {
-	mux.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+func (mux *Mux) mainPage(pattern string) {
+	mux.router.Get(pattern, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "text/html")
 		w.Write([]byte(metricsToString(mux.storage.GetAll())))
 	})
 }
 
-func metricPage(mux *Mux) {
-	mux.router.Get("/value/{type}/{name}", func(w http.ResponseWriter, r *http.Request) {
+func (mux *Mux) metricPage(pattern string) {
+	mux.router.Get(pattern, func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "name")
 		if v, ok := mux.storage.Get(name); ok {
 			if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
@@ -46,22 +52,21 @@ func metricPage(mux *Mux) {
 	})
 }
 
-func updateMetric(mux *Mux) {
-	mux.router.Post("/update/{type}/{name}/{value}", func(w http.ResponseWriter, r *http.Request) {
-		if chi.URLParam(r, "name") == constants.EmptyString {
+func (mux *Mux) updateMetric(pattern string) {
+	mux.router.Post(pattern, func(w http.ResponseWriter, r *http.Request) {
+		if chi.URLParam(r, "name") == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		switch chi.URLParam(r, "type") {
-		case constants.GaugeType:
-			fmt.Println(chi.URLParam(r, "type"), " ", chi.URLParam(r, "name"), " ", chi.URLParam(r, "value"))
+		case "gauge":
 			res, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 			}
 			w.WriteHeader(http.StatusOK)
 			mux.storage.Add(chi.URLParam(r, "name"), storage.Gauge(res))
-		case constants.CounterType:
+		case "counter":
 			res, err := strconv.ParseInt(chi.URLParam(r, "value"), 10, 64)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
@@ -75,9 +80,9 @@ func updateMetric(mux *Mux) {
 }
 
 func (mux *Mux) Router() chi.Router {
-	mainPage(mux)
-	metricPage(mux)
-	updateMetric(mux)
+	mux.mainPage("/")
+	mux.metricPage("/value/{type}/{name}")
+	mux.updateMetric("/update/{type}/{name}/{value}")
 	return mux.router
 }
 
@@ -97,18 +102,18 @@ func metricsToString(m storage.Metrics) string {
 }
 
 func singleMetricToString(v interface{}) string {
-	switch x := v.(type) {
+	switch res := v.(type) {
 	case storage.Gauge:
-		return float2String(float64(x))
+		return float2String(float64(res))
 	case storage.Counter:
-		return fmt.Sprintf("%d", x)
+		return fmt.Sprintf("%d", res)
 	}
 	return ""
 }
 
-func float2String(x float64) string {
-	if math.Trunc(x) == x {
-		return fmt.Sprintf("%.0f", x)
+func float2String(v float64) string {
+	if math.Trunc(v) == v {
+		return fmt.Sprintf("%.0f", v)
 	}
-	return strings.TrimRight(fmt.Sprintf("%.3f", x), "0")
+	return strings.TrimRight(fmt.Sprintf("%.3f", v), "0")
 }
