@@ -10,9 +10,9 @@ type Server struct {
 	host string
 }
 
-func CreateNewServer() *Server {
+func CreateNewServer(repository handler.Repository) *Server {
 	var serv = &Server{nil, ""}
-	serv.mux = handler.NewMux()
+	serv.mux = handler.NewMux(repository)
 	return serv
 }
 

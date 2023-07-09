@@ -19,7 +19,7 @@ func TestNewMux(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mux := NewMux()
+			mux := NewMux(storage.NewStorage())
 			mux.router = nil
 			assert.Equal(t, tc.expected, mux)
 		})
@@ -94,7 +94,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 }
 
 func TestMux_Router(t *testing.T) {
-	mux := NewMux()
+	mux := NewMux(storage.NewStorage())
 	ts := httptest.NewServer(mux.Router())
 	defer ts.Close()
 	type response struct {

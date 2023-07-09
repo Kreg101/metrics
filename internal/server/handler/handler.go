@@ -22,9 +22,9 @@ type Mux struct {
 	router  chi.Router
 }
 
-func NewMux() *Mux {
+func NewMux(storage Repository) *Mux {
 	mux := &Mux{}
-	mux.storage = storage.NewStorage()
+	mux.storage = storage
 	mux.router = chi.NewRouter()
 	return mux
 }
