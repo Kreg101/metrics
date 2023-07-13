@@ -76,10 +76,8 @@ func (a *Agent) Start() {
 	}()
 
 	for {
-		select {
-		case <-ticker.C:
-			runtime.ReadMemStats(&a.stats)
-			pollCount++
-		}
+		_ = <-ticker.C
+		runtime.ReadMemStats(&a.stats)
+		pollCount++
 	}
 }
