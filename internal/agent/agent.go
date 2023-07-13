@@ -57,11 +57,8 @@ func getMapOfStats(stats *runtime.MemStats) map[string]string {
 
 func (a *Agent) Start() {
 	var pollCount int
-	ticker := time.NewTicker(a.updateFreq)
-	defer ticker.Stop()
 	go func() {
-		for {
-			time.Sleep(a.sendFreq)
+		for _ = range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(&a.stats) {
 				_, err := a.client.R().Post(a.host + "/update/gauge/" + k + "/" + v)
 				if err != nil {
@@ -75,8 +72,7 @@ func (a *Agent) Start() {
 		}
 	}()
 
-	for {
-		<-ticker.C
+	for _ = range time.Tick(a.updateFreq) {
 		runtime.ReadMemStats(&a.stats)
 		pollCount++
 	}
