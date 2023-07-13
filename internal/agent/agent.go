@@ -57,6 +57,8 @@ func getMapOfStats(stats *runtime.MemStats) map[string]string {
 
 func (a *Agent) Start() {
 	var pollCount int
+	ticker := time.NewTicker(a.updateFreq)
+	defer ticker.Stop()
 	go func() {
 		for {
 			time.Sleep(a.sendFreq)
@@ -74,8 +76,10 @@ func (a *Agent) Start() {
 	}()
 
 	for {
-		runtime.ReadMemStats(&a.stats)
-		pollCount++
-		time.Sleep(a.updateFreq)
+		select {
+		case <-ticker.C:
+			runtime.ReadMemStats(&a.stats)
+			pollCount++
+		}
 	}
 }
