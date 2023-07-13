@@ -9,7 +9,7 @@ func main() {
 
 	parseFlags()
 
-	s := server.CreateNewServer(storage.NewStorage())
+	s := server.NewServer(storage.NewStorage())
 	err := s.ListenAndServe(flagEndpoint)
 	if err != nil {
 		panic(err)

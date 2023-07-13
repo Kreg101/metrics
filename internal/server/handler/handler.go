@@ -43,7 +43,7 @@ func (mux *Mux) metricPage(pattern string) {
 		if v, ok := mux.storage.Get(name); ok {
 			if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
 				w.WriteHeader(http.StatusOK)
-				w.Header().Set("content-type", "text/html")
+				w.Header().Set("content-type", "text/plain")
 				w.Write([]byte(singleMetricToString(v)))
 				return
 			}

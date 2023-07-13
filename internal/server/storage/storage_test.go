@@ -8,9 +8,9 @@ import (
 
 func createStorageFromMap(m map[string]interface{}) *Storage {
 	s := &Storage{}
-	s.metrics = &Metrics{}
+	s.metrics = Metrics{}
 	for k, v := range m {
-		(*s.metrics)[k] = v
+		s.metrics[k] = v
 	}
 	return s
 }
@@ -24,7 +24,7 @@ func TestNewStorage(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.want.metrics = &Metrics{}
+			tc.want.metrics = Metrics{}
 			assert.Equal(t, tc.want, NewStorage())
 		})
 	}
