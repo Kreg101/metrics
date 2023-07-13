@@ -76,7 +76,7 @@ func (a *Agent) Start() {
 	}()
 
 	for {
-		_ = <-ticker.C
+		<-ticker.C
 		runtime.ReadMemStats(&a.stats)
 		pollCount++
 	}
