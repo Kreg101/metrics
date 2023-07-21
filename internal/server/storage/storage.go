@@ -1,5 +1,7 @@
 package storage
 
+import "fmt"
+
 type Gauge float64
 type Counter int64
 
@@ -16,6 +18,7 @@ func NewStorage() *Storage {
 }
 
 func (s *Storage) Add(key string, value interface{}) {
+	fmt.Println(key, value)
 	switch v := value.(type) {
 	case Gauge:
 		s.metrics[key] = v
