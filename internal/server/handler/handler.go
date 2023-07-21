@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Repository interface {
@@ -19,6 +20,7 @@ type Repository interface {
 
 type Mux struct {
 	storage Repository
+	sync.Mutex
 }
 
 func NewMux(storage Repository) *Mux {
@@ -47,6 +49,8 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
+	mux.Lock()
+	defer mux.Unlock()
 	if chi.URLParam(r, "name") == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return

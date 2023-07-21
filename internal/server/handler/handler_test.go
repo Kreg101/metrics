@@ -15,12 +15,14 @@ func TestNewMux(t *testing.T) {
 		name     string
 		expected *Mux
 	}{
-		{name: "default constructor", expected: &Mux{storage: storage.NewStorage()}},
+		{
+			name:     "default constructor",
+			expected: &Mux{storage: storage.NewStorage()},
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			mux := NewMux(storage.NewStorage())
-			//mux.router = nil
 			assert.Equal(t, tc.expected, mux)
 		})
 	}
@@ -34,8 +36,16 @@ func Test_metricsToString(t *testing.T) {
 		source storage.Metrics
 		want   string
 	}{
-		{name: "single counter metric", source: storage.Metrics{"x": storage.Counter(1)}, want: "x:1"},
-		{name: "single gauge metric", source: storage.Metrics{"x": storage.Gauge(1.340)}, want: "x:1.34"},
+		{
+			name:   "single counter metric",
+			source: storage.Metrics{"x": storage.Counter(1)},
+			want:   "x:1",
+		},
+		{
+			name:   "single gauge metric",
+			source: storage.Metrics{"x": storage.Gauge(1.340)},
+			want:   "x:1.34",
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -50,9 +60,21 @@ func Test_singleMetricToString(t *testing.T) {
 		source interface{}
 		want   string
 	}{
-		{name: "counter metric", source: storage.Counter(1), want: "1"},
-		{name: "gauge metric", source: storage.Gauge(1.34), want: "1.34"},
-		{name: "invalid type metric", source: 2, want: ""},
+		{
+			name:   "counter metric",
+			source: storage.Counter(1),
+			want:   "1",
+		},
+		{
+			name:   "gauge metric",
+			source: storage.Gauge(1.34),
+			want:   "1.34",
+		},
+		{
+			name:   "invalid type metric",
+			source: 2,
+			want:   "",
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -67,10 +89,26 @@ func Test_float2String(t *testing.T) {
 		args float64
 		want string
 	}{
-		{name: "no trim", args: 1.235, want: "1.235"},
-		{name: "trim 1 digit", args: 1.230, want: "1.23"},
-		{name: "trim 2 digits", args: 1.200, want: "1.2"},
-		{name: "integer", args: 1.00000, want: "1"},
+		{
+			name: "no trim",
+			args: 1.235,
+			want: "1.235",
+		},
+		{
+			name: "trim 1 digit",
+			args: 1.230,
+			want: "1.23",
+		},
+		{
+			name: "trim 2 digits",
+			args: 1.200,
+			want: "1.2",
+		},
+		{
+			name: "integer",
+			args: 1.00000,
+			want: "1",
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -107,27 +145,72 @@ func TestMux_Router(t *testing.T) {
 		method string
 		want   response
 	}{
-		{name: "main page", url: "/", method: http.MethodGet, want: response{statusCode: 200, body: ""}},
-		{name: "correct update counter request", url: "/update/counter/x/10", method: http.MethodPost,
-			want: response{http.StatusOK, ""}},
-		{name: "correct update gauge request", url: "/update/gauge/y/1.23", method: http.MethodPost,
-			want: response{http.StatusOK, ""}},
-		{name: "no metric name in update request #1", url: "/update/counter//10", method: http.MethodPost,
-			want: response{http.StatusNotFound, ""}},
-		{name: "no metric name in update request #2", url: "/update/counter", method: http.MethodPost,
-			want: response{http.StatusNotFound, "404 page not found\n"}},
-		{name: "invalid counter type value", url: "/update/counter/x/abc", method: http.MethodPost,
-			want: response{http.StatusBadRequest, ""}},
-		{name: "invalid gauge type value", url: "/update/counter/x/abc", method: http.MethodPost,
-			want: response{http.StatusBadRequest, ""}},
-		{name: "invalid metric type", url: "/update/counte/x/abc", method: http.MethodPost,
-			want: response{http.StatusBadRequest, ""}},
-		{name: "single metric request", url: "/value/counter/x", method: http.MethodGet,
-			want: response{statusCode: http.StatusOK, body: "10"}},
-		{name: "invalid metric type request", url: "/value/cor/x", method: http.MethodGet,
-			want: response{statusCode: http.StatusNotFound, body: ""}},
-		{name: "no metric in storage", url: "/value/counter/z", method: http.MethodGet,
-			want: response{statusCode: http.StatusNotFound, body: ""}},
+		{
+			name:   "main page",
+			url:    "/",
+			method: http.MethodGet,
+			want:   response{http.StatusOK, ""},
+		},
+		{
+			name:   "correct update counter request",
+			url:    "/update/counter/x/10",
+			method: http.MethodPost,
+			want:   response{http.StatusOK, ""},
+		},
+		{
+			name:   "correct update gauge request",
+			url:    "/update/gauge/y/1.23",
+			method: http.MethodPost,
+			want:   response{http.StatusOK, ""},
+		},
+		{
+			name:   "no metric name in update request #1",
+			url:    "/update/counter//10",
+			method: http.MethodPost,
+			want:   response{http.StatusNotFound, ""},
+		},
+		{
+			name:   "no metric name in update request #2",
+			url:    "/update/counter",
+			method: http.MethodPost,
+			want:   response{http.StatusNotFound, "404 page not found\n"},
+		},
+		{
+			name:   "invalid counter type value",
+			url:    "/update/counter/x/abc",
+			method: http.MethodPost,
+			want:   response{http.StatusBadRequest, ""},
+		},
+		{
+			name:   "invalid gauge type value",
+			url:    "/update/counter/x/abc",
+			method: http.MethodPost,
+			want:   response{http.StatusBadRequest, ""},
+		},
+		{
+			name:   "invalid metric type",
+			url:    "/update/counte/x/abc",
+			method: http.MethodPost,
+			want:   response{http.StatusBadRequest, ""},
+		},
+		{
+			name:   "single metric request",
+			url:    "/value/counter/x",
+			method: http.MethodGet,
+			want:   response{statusCode: http.StatusOK, body: "10"},
+		},
+		{
+			name:   "invalid metric type request",
+			url:    "/value/cor/x",
+			method: http.MethodGet,
+			want:   response{statusCode: http.StatusNotFound, body: ""},
+		},
+		{
+			name:   "no metric in storage",
+			url:    "/value/counter/z",
+			method: http.MethodGet,
+			want:   response{statusCode: http.StatusNotFound, body: ""},
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
