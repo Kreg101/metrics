@@ -51,6 +51,7 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
 	switch chi.URLParam(r, "type") {
 	case "gauge":
 		res, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)

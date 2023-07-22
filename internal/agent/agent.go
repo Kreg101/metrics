@@ -13,13 +13,13 @@ type Agent struct {
 	sendFreq   time.Duration
 	host       string
 	stats      runtime.MemStats
-	//client     *resty.Client
 }
 
 func NewAgent(update int, send int, host string) *Agent {
-	agent := &Agent{updateFreq: time.Duration(update) * time.Second,
-		sendFreq: time.Duration(send) * time.Second, host: host,
-		//client: resty.New()
+	agent := &Agent{
+		updateFreq: time.Duration(update) * time.Second,
+		sendFreq:   time.Duration(send) * time.Second,
+		host:       host,
 	}
 	return agent
 }
@@ -60,11 +60,10 @@ func getMapOfStats(stats *runtime.MemStats) map[string]string {
 func (a *Agent) Start() {
 	client := resty.New()
 	var pollCount int
-	
+
 	go func() {
 		for range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(&a.stats) {
-
 				go func(host, k, v string, client *resty.Client) {
 					_, err := client.R().Post(host + "/update/gauge/" + k + "/" + v)
 					if err != nil {
@@ -72,12 +71,7 @@ func (a *Agent) Start() {
 					}
 				}(a.host, k, v, client)
 
-				//_, err := a.client.R().Post(a.host + "/update/gauge/" + k + "/" + v)
-				//if err != nil {
-				//	fmt.Println(err)
-				//}
 			}
-
 			go func(host string, client *resty.Client) {
 				_, err := client.R().Post(host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount))
 				if err != nil {
