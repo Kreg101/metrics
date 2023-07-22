@@ -3,11 +3,12 @@ package storage
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 )
 
 func createStorageFromMap(m map[string]interface{}) *Storage {
-	s := &Storage{}
+	s := &Storage{mutex: &sync.RWMutex{}}
 	s.metrics = Metrics{}
 	for k, v := range m {
 		s.metrics[k] = v
@@ -22,7 +23,7 @@ func TestNewStorage(t *testing.T) {
 	}{
 		{
 			name: "basic",
-			want: &Storage{},
+			want: &Storage{mutex: &sync.RWMutex{}},
 		},
 	}
 	for _, tc := range tt {
