@@ -1,5 +1,7 @@
 package storage
 
+import "sync"
+
 type Gauge float64
 type Counter int64
 
@@ -7,6 +9,7 @@ type Metrics map[string]interface{}
 
 type Storage struct {
 	metrics Metrics
+	sync.Mutex
 }
 
 // NewStorage return pointer to Storage with initialized metrics field
@@ -17,6 +20,8 @@ func NewStorage() *Storage {
 }
 
 func (s *Storage) Add(key string, value interface{}) {
+	s.Lock()
+	defer s.Unlock()
 	switch v := value.(type) {
 	case Gauge:
 		s.metrics[key] = v
@@ -31,11 +36,15 @@ func (s *Storage) Add(key string, value interface{}) {
 }
 
 func (s *Storage) GetAll() Metrics {
+	s.Lock()
+	defer s.Unlock()
 	return s.metrics
 }
 
 // Get return an element, true if it exists in map or nil, false if it's not
 func (s *Storage) Get(name string) (interface{}, bool) {
+	s.Lock()
+	defer s.Unlock()
 	if v, ok := s.metrics[name]; ok {
 		return v, ok
 	}
@@ -45,6 +54,8 @@ func (s *Storage) Get(name string) (interface{}, bool) {
 // CheckType returns string, because it's easier to compare result with pattern
 // in handler's functions
 func (s *Storage) CheckType(name string) string {
+	s.Lock()
+	defer s.Unlock()
 	switch s.metrics[name].(type) {
 	case Gauge:
 		return "gauge"

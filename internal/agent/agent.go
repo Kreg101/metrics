@@ -70,6 +70,7 @@ func (a *Agent) Start() {
 						fmt.Println(err)
 					}
 				}(a.host, k, v, client)
+
 			}
 			go func(host string, client *resty.Client) {
 				_, err := client.R().Post(host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount))
