@@ -16,6 +16,6 @@ func NewServer(repository handler.Repository) *Server {
 	return serv
 }
 
-func (s *Server) ListenAndServe(addr string) error {
+func (s *Server) Start(addr string) error {
 	return http.ListenAndServe(addr, s.mux.Router())
 }

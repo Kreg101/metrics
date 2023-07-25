@@ -73,6 +73,12 @@ func (a *Agent) Start() {
 
 			}
 			go func(host string, client *resty.Client) {
+				_, err := client.R().Get(host + "/")
+				if err != nil {
+					fmt.Println(err)
+				}
+			}(a.host, client)
+			go func(host string, client *resty.Client) {
 				_, err := client.R().Post(host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount))
 				if err != nil {
 					fmt.Println(err)

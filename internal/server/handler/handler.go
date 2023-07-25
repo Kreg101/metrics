@@ -2,12 +2,14 @@ package handler
 
 import (
 	"fmt"
+	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Repository interface {
@@ -25,6 +27,34 @@ func NewMux(storage Repository) *Mux {
 	mux := &Mux{}
 	mux.storage = storage
 	return mux
+}
+
+func withLogging(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log := logger.Default()
+
+		start := time.Now()
+
+		responseData := &responseData{
+			status: 0,
+			size:   0,
+		}
+		lw := loggingResponseWriter{
+			ResponseWriter: w,
+			responseData:   responseData,
+		}
+		h.ServeHTTP(&lw, r)
+
+		duration := time.Since(start).Milliseconds()
+
+		log.Infoln(
+			"uri", r.RequestURI,
+			"method", r.Method,
+			"status", responseData.status,
+			"duration", duration,
+			"size", responseData.size,
+		)
+	}
 }
 
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
@@ -74,9 +104,9 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/", mux.mainPage)
-	router.Get("/value/{type}/{name}", mux.metricPage)
-	router.Post("/update/{type}/{name}/{value}", mux.updateMetric)
+	router.Get("/", withLogging(mux.mainPage))
+	router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
+	router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
 	return router
 }
 
