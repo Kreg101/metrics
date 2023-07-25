@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func configure() *zap.SugaredLogger {
+func New(level string) *zap.SugaredLogger {
 	file, err := os.OpenFile("info.log", os.O_TRUNC|os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -15,7 +15,7 @@ func configure() *zap.SugaredLogger {
 	defer file.Close()
 
 	sampleJSON := []byte(`{
-       "level" : "info",
+       "level" : ` + level + `,
        "encoding": "json",
        "outputPaths":["info.log"],
        "errorOutputPaths":["stderr"],
@@ -41,8 +41,8 @@ func configure() *zap.SugaredLogger {
 	return logger.Sugar()
 }
 
-var singleLogger = configure()
+var singleLogger = New("info")
 
-func New() *zap.SugaredLogger {
+func Default() *zap.SugaredLogger {
 	return singleLogger
 }

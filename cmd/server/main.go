@@ -10,7 +10,7 @@ func main() {
 
 	parseFlags()
 
-	log := logger.New()
+	log := logger.Default()
 	defer log.Sync()
 
 	repository := storage.NewStorage()

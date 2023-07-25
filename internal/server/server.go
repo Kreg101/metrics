@@ -11,7 +11,7 @@ type Server struct {
 }
 
 func NewServer(repository handler.Repository) *Server {
-	var serv = &Server{nil, ""}
+	serv := &Server{nil, ""}
 	serv.mux = handler.NewMux(repository)
 	return serv
 }

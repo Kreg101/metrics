@@ -31,14 +31,13 @@ func NewMux(storage Repository) *Mux {
 
 func withLogging(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log := logger.New()
+		// due to the use of aka singleton pattern this log will be the same
+		// as log in main
+		log := logger.Default()
 
 		start := time.Now()
 
-		responseData := &responseData{
-			status: 0,
-			size:   0,
-		}
+		responseData := &responseData{}
 		lw := loggingResponseWriter{
 			ResponseWriter: w,
 			responseData:   responseData,
