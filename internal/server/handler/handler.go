@@ -31,7 +31,7 @@ func NewMux(storage Repository) *Mux {
 
 func withLogging(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Default()
+		log := logger.New()
 
 		start := time.Now()
 

@@ -8,7 +8,7 @@ import (
 func main() {
 
 	parseFlags()
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 10; i++ {
 		go func() {
 			a := agent.NewAgent(flagPollInterval, flagReportInterval, "http://"+flagEndpoint)
 			a.Start()

@@ -10,14 +10,15 @@ func main() {
 
 	parseFlags()
 
-	log := logger.Default()
+	log := logger.New()
 	defer log.Sync()
 
-	s := server.NewServer(storage.NewStorage())
-	
+	repository := storage.NewStorage()
+
+	s := server.NewServer(repository)
 	err := s.Start(flagEndpoint)
 	if err != nil {
-		panic(err)
+		log.Fatalf("can't start server: %e", err)
 	}
 
 }
