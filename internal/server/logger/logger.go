@@ -15,7 +15,7 @@ func New(level string) *zap.SugaredLogger {
 	defer file.Close()
 
 	sampleJSON := []byte(`{
-       "level" : ` + level + `,
+       "level" : "` + level + `",
        "encoding": "json",
        "outputPaths":["info.log"],
        "errorOutputPaths":["stderr"],
