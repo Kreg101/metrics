@@ -68,10 +68,11 @@ func (a *Agent) Start() {
 			for k, v := range getMapOfStats(&a.stats) {
 				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
 				go func(url string) {
-					_, err := http.Post(url, "text/plain", nil)
+					resp, err := http.Post(url, "text/plain", nil)
 					if err != nil {
 						fmt.Println(err)
 					}
+					defer resp.Body.Close()
 				}(url)
 
 				m := communication.Metrics{
@@ -85,20 +86,21 @@ func (a *Agent) Start() {
 				}
 
 				go func(url string, json []byte) {
-					x, e := http.Post(url, "application/json", bytes.NewBuffer(res))
+					resp, e := http.Post(url, "application/json", bytes.NewBuffer(res))
 					if e != nil {
 						fmt.Println(e)
 					}
-					fmt.Println(x)
+					defer resp.Body.Close()
 				}(a.host+"/update/", res)
 			}
 
 			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
 			go func(url string) {
-				_, err := http.Post(url, "text/plain", nil)
+				resp, err := http.Post(url, "text/plain", nil)
 				if err != nil {
 					fmt.Println(err)
 				}
+				defer resp.Body.Close()
 			}(url)
 
 			m := communication.Metrics{
@@ -112,11 +114,11 @@ func (a *Agent) Start() {
 			}
 
 			go func(url string, json []byte) {
-				x, e := http.Post(url, "application/json", bytes.NewBuffer(res))
+				resp, e := http.Post(url, "application/json", bytes.NewBuffer(res))
 				if e != nil {
 					fmt.Println(e)
 				}
-				fmt.Println(x)
+				defer resp.Body.Close()
 			}(a.host+"/update/", res)
 		}
 	}()
