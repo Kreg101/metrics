@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/Kreg101/metrics/internal/communication"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
@@ -101,11 +103,63 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
+	var m communication.Metrics
+	err := json.NewDecoder(r.Body).Decode(&m)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+
+	switch m.MType {
+	case "counter":
+		if m.Delta == nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
+
+		e := json.NewEncoder(w).Encode(r.Body)
+		if e != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+	case "gauge":
+		if m.Value == nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		mux.storage.Add(m.ID, storage.Gauge(*m.Value))
+
+		if v, ok := mux.storage.Get(m.ID); ok {
+			*m.Value = float64(v.(storage.Gauge))
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		e := json.NewEncoder(w).Encode(m)
+		if e != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
 	router.Get("/", withLogging(mux.mainPage))
 	router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
 	router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
+	router.Post("/update/", withLogging(mux.updateMetricWithBody))
 	return router
 }
 

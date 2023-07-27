@@ -1,9 +1,12 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
+	"github.com/Kreg101/metrics/internal/communication"
 	"math/rand"
+	"net/http"
 	"runtime"
 	"time"
 )
@@ -24,66 +27,97 @@ func NewAgent(update int, send int, host string) *Agent {
 	return agent
 }
 
-func getMapOfStats(stats *runtime.MemStats) map[string]string {
-	res := make(map[string]string)
-	res["Alloc"] = fmt.Sprintf("%f", float64(stats.Alloc))
-	res["BuckHashSys"] = fmt.Sprintf("%f", float64(stats.BuckHashSys))
-	res["Frees"] = fmt.Sprintf("%f", float64(stats.Frees))
-	res["GCCPUFraction"] = fmt.Sprintf("%f", float64(stats.GCCPUFraction))
-	res["GCSys"] = fmt.Sprintf("%f", float64(stats.GCSys))
-	res["HeapAlloc"] = fmt.Sprintf("%f", float64(stats.HeapAlloc))
-	res["HeapIdle"] = fmt.Sprintf("%f", float64(stats.HeapIdle))
-	res["HeapInuse"] = fmt.Sprintf("%f", float64(stats.HeapInuse))
-	res["HeapObject"] = fmt.Sprintf("%f", float64(stats.HeapObjects))
-	res["HeapReleased"] = fmt.Sprintf("%f", float64(stats.HeapReleased))
-	res["HeapSys"] = fmt.Sprintf("%f", float64(stats.HeapSys))
-	res["LastGC"] = fmt.Sprintf("%f", float64(stats.LastGC))
-	res["Lookups"] = fmt.Sprintf("%f", float64(stats.Lookups))
-	res["MCacheInuse"] = fmt.Sprintf("%f", float64(stats.MCacheInuse))
-	res["MCacheSys"] = fmt.Sprintf("%f", float64(stats.MCacheSys))
-	res["MSpanInuse"] = fmt.Sprintf("%f", float64(stats.MSpanInuse))
-	res["MSpanSys"] = fmt.Sprintf("%f", float64(stats.MSpanSys))
-	res["Mallocs"] = fmt.Sprintf("%f", float64(stats.Mallocs))
-	res["NextGC"] = fmt.Sprintf("%f", float64(stats.NextGC))
-	res["NumForcedGC"] = fmt.Sprintf("%f", float64(stats.NumForcedGC))
-	res["NumGC"] = fmt.Sprintf("%f", float64(stats.NumGC))
-	res["OtherSys"] = fmt.Sprintf("%f", float64(stats.OtherSys))
-	res["PauseTotalNs"] = fmt.Sprintf("%f", float64(stats.PauseTotalNs))
-	res["StackInuse"] = fmt.Sprintf("%f", float64(stats.StackInuse))
-	res["StackSys"] = fmt.Sprintf("%f", float64(stats.StackSys))
-	res["Sys"] = fmt.Sprintf("%f", float64(stats.Sys))
-	res["TotalAlloc"] = fmt.Sprintf("%f", float64(stats.TotalAlloc))
-	res["RandomValue"] = fmt.Sprintf("%f", rand.Float64())
+func getMapOfStats(stats *runtime.MemStats) map[string]float64 {
+	res := make(map[string]float64)
+	res["Alloc"] = float64(stats.Alloc)
+	res["BuckHashSys"] = float64(stats.BuckHashSys)
+	res["Frees"] = float64(stats.Frees)
+	res["GCCPUFraction"] = float64(stats.GCCPUFraction)
+	res["GCSys"] = float64(stats.GCSys)
+	res["HeapAlloc"] = float64(stats.HeapAlloc)
+	res["HeapIdle"] = float64(stats.HeapIdle)
+	res["HeapInuse"] = float64(stats.HeapInuse)
+	res["HeapObject"] = float64(stats.HeapObjects)
+	res["HeapReleased"] = float64(stats.HeapReleased)
+	res["HeapSys"] = float64(stats.HeapSys)
+	res["LastGC"] = float64(stats.LastGC)
+	res["Lookups"] = float64(stats.Lookups)
+	res["MCacheInuse"] = float64(stats.MCacheInuse)
+	res["MCacheSys"] = float64(stats.MCacheSys)
+	res["MSpanInuse"] = float64(stats.MSpanInuse)
+	res["MSpanSys"] = float64(stats.MSpanSys)
+	res["Mallocs"] = float64(stats.Mallocs)
+	res["NextGC"] = float64(stats.NextGC)
+	res["NumForcedGC"] = float64(stats.NumForcedGC)
+	res["NumGC"] = float64(stats.NumGC)
+	res["OtherSys"] = float64(stats.OtherSys)
+	res["PauseTotalNs"] = float64(stats.PauseTotalNs)
+	res["StackInuse"] = float64(stats.StackInuse)
+	res["StackSys"] = float64(stats.StackSys)
+	res["Sys"] = float64(stats.Sys)
+	res["TotalAlloc"] = float64(stats.TotalAlloc)
+	res["RandomValue"] = rand.Float64()
 	return res
 }
 
 func (a *Agent) Start() {
-	client := resty.New()
-	var pollCount int
+	var pollCount int64
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(&a.stats) {
-				go func(host, k, v string, client *resty.Client) {
-					_, err := client.R().Post(host + "/update/gauge/" + k + "/" + v)
+				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
+				go func(url string) {
+					_, err := http.Post(url, "text/plain", nil)
 					if err != nil {
 						fmt.Println(err)
 					}
-				}(a.host, k, v, client)
+				}(url)
 
+				m := communication.Metrics{
+					ID:    k,
+					MType: "gauge",
+					Value: &v,
+				}
+				res, err := json.Marshal(m)
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				go func(url string, json []byte) {
+					x, e := http.Post(url, "application/json", bytes.NewBuffer(res))
+					if e != nil {
+						fmt.Println(e)
+					}
+					fmt.Println(x)
+				}(a.host+"/update/", res)
 			}
-			go func(host string, client *resty.Client) {
-				_, err := client.R().Get(host + "/")
+
+			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
+			go func(url string) {
+				_, err := http.Post(url, "text/plain", nil)
 				if err != nil {
 					fmt.Println(err)
 				}
-			}(a.host, client)
-			go func(host string, client *resty.Client) {
-				_, err := client.R().Post(host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount))
-				if err != nil {
-					fmt.Println(err)
+			}(url)
+
+			m := communication.Metrics{
+				ID:    "PollCount",
+				MType: "counter",
+				Delta: &pollCount,
+			}
+			res, err := json.Marshal(m)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			go func(url string, json []byte) {
+				x, e := http.Post(url, "application/json", bytes.NewBuffer(res))
+				if e != nil {
+					fmt.Println(e)
 				}
-			}(a.host, client)
+				fmt.Println(x)
+			}(a.host+"/update/", res)
 		}
 	}()
 
