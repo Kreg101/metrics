@@ -106,10 +106,10 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	var m communication.Metrics
 	err := json.NewDecoder(r.Body).Decode(&m)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	switch m.MType {
 	case "counter":
@@ -146,7 +146,7 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 
 	default:

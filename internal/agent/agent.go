@@ -86,10 +86,11 @@ func (a *Agent) Start() {
 				}
 
 				go func(url string, json []byte) {
-					resp, e := http.Post(url, "application/json", bytes.NewBuffer(res))
+					resp, e := http.Post(url, "application/json", bytes.NewBuffer(json))
 					if e != nil {
 						fmt.Println(e)
 					}
+					fmt.Println(resp)
 					defer resp.Body.Close()
 				}(a.host+"/update/", res)
 			}
@@ -114,10 +115,12 @@ func (a *Agent) Start() {
 			}
 
 			go func(url string, json []byte) {
-				resp, e := http.Post(url, "application/json", bytes.NewBuffer(res))
+				resp, e := http.Post(url, "application/json", bytes.NewBuffer(json))
 				if e != nil {
 					fmt.Println(e)
 				}
+				fmt.Println(resp)
+
 				defer resp.Body.Close()
 			}(a.host+"/update/", res)
 		}
