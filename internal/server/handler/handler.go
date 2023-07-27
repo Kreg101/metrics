@@ -119,7 +119,14 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		}
 		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
 
-		e := json.NewEncoder(w).Encode(r.Body)
+		//if v, ok := mux.storage.Get(m.ID); ok {
+		//	*m.Delta = int64(v.(storage.Counter))
+		//} else {
+		//	http.Error(w, err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+
+		e := json.NewEncoder(w).Encode(m)
 		if e != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

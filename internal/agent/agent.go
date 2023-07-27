@@ -85,12 +85,14 @@ func (a *Agent) Start() {
 					fmt.Println(err)
 				}
 
-				go func(url string, json []byte) {
-					resp, e := http.Post(url, "application/json", bytes.NewBuffer(json))
+				go func(url string, js []byte) {
+					resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
 					if e != nil {
 						fmt.Println(e)
 					}
-					fmt.Println(resp)
+					var m communication.Metrics
+					_ = json.NewDecoder(resp.Body).Decode(&m)
+					fmt.Println(m.ID, *m.Value)
 					defer resp.Body.Close()
 				}(a.host+"/update/", res)
 			}
@@ -114,13 +116,14 @@ func (a *Agent) Start() {
 				fmt.Println(err)
 			}
 
-			go func(url string, json []byte) {
-				resp, e := http.Post(url, "application/json", bytes.NewBuffer(json))
+			go func(url string, js []byte) {
+				resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
 				if e != nil {
 					fmt.Println(e)
 				}
-				fmt.Println(resp)
-
+				var m communication.Metrics
+				_ = json.NewDecoder(resp.Body).Decode(&m)
+				fmt.Println(m.ID, *m.Delta)
 				defer resp.Body.Close()
 			}(a.host+"/update/", res)
 		}
