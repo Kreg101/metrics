@@ -119,6 +119,7 @@ func (a *Agent) Start() {
 				//}(a.host+"/value/", res)
 				resp, _ = http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
 				_ = json.NewDecoder(resp.Body).Decode(&m)
+				fmt.Println(resp.Header.Get("Content-Type"))
 				if m.Value == nil {
 					fmt.Println(m.ID, "nil")
 				} else {
@@ -175,6 +176,7 @@ func (a *Agent) Start() {
 
 			resp, _ = http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
 			_ = json.NewDecoder(resp.Body).Decode(&m)
+			fmt.Println(resp.Header.Get("Content-Type"))
 			if m.Delta == nil {
 				fmt.Println("Delta is nil")
 			} else {

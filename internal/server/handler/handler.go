@@ -120,7 +120,8 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
 
 		if v, ok := mux.storage.Get(m.ID); ok {
-			*m.Delta = int64(v.(storage.Counter))
+			help := int64(v.(storage.Counter))
+			m.Delta = &help
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
