@@ -107,14 +107,16 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	var m communication.Metrics
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("can't decode"))
 		return
 	}
 
 	switch m.MType {
 	case "counter":
 		if m.Delta == nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("get nil counter value"))
 			return
 		}
 		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
@@ -123,7 +125,8 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			help := int64(v.(storage.Counter))
 			m.Delta = &help
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("some shit"))
 			return
 		}
 
@@ -131,13 +134,15 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 
 		e := json.NewEncoder(w).Encode(m)
 		if e != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("can't encode"))
 			return
 		}
 
 	case "gauge":
 		if m.Value == nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("get nil gauge value"))
 			return
 		}
 		mux.storage.Add(m.ID, storage.Gauge(*m.Value))
@@ -146,7 +151,8 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 
 		e := json.NewEncoder(w).Encode(m)
 		if e != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("can't encode gauge"))
 			return
 		}
 	}
@@ -156,7 +162,8 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	var m communication.Metrics
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Decode:wrong"))
 		return
 	}
 
@@ -171,11 +178,13 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 				m.Value = &tmp
 			}
 		} else {
-			fmt.Println("wrong metric type")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("wrong type of metric"))
 			return
 		}
 	} else {
-		fmt.Println("no such metric")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("no such metric"))
 		return
 	}
 
@@ -183,7 +192,8 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewEncoder(w).Encode(m)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Encode:wrong"))
 		return
 	}
 }
