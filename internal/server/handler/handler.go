@@ -178,12 +178,12 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 				m.Value = &tmp
 			}
 		} else {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("wrong type of metric"))
 			return
 		}
 	} else {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("no such metric"))
 		return
 	}
