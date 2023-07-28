@@ -119,13 +119,6 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		}
 		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
 
-		//if v, ok := mux.storage.Get(m.ID); ok {
-		//	*m.Delta = int64(v.(storage.Counter))
-		//} else {
-		//	http.Error(w, err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
-
 		e := json.NewEncoder(w).Encode(m)
 		if e != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -161,12 +154,43 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
+	var m communication.Metrics
+	err := json.NewDecoder(r.Body).Decode(&m)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if v, ok := mux.storage.Get(m.ID); ok {
+		if mux.storage.CheckType(m.ID) == m.MType {
+			switch m.MType {
+			case "counter":
+				tmp := int64(v.(storage.Counter))
+				m.Delta = &tmp
+			case "gauge":
+				tmp := float64(v.(storage.Gauge))
+				m.Value = &tmp
+			}
+		}
+	}
+
+	err = json.NewEncoder(w).Encode(m)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+}
+
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
 	router.Get("/", withLogging(mux.mainPage))
 	router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
 	router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
 	router.Post("/update/", withLogging(mux.updateMetricWithBody))
+	router.Post("/value/", withLogging(mux.getMetric))
 	return router
 }
 
