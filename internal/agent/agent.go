@@ -117,15 +117,19 @@ func (a *Agent) Start() {
 				//	fmt.Println(m.ID, m.Value)
 				//	defer resp.Body.Close()
 				//}(a.host+"/value/", res)
-				resp, _ = http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
-				_ = json.NewDecoder(resp.Body).Decode(&m)
-				fmt.Println(resp.Header.Get("Content-Type"))
+				r, err := http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				_ = json.NewDecoder(r.Body).Decode(&m)
+				fmt.Println(r.Header.Get("Content-Type"))
 				if m.Value == nil {
 					fmt.Println(m.ID, "nil")
 				} else {
 					fmt.Println(m.ID, *m.Value)
 				}
-				defer resp.Body.Close()
+				defer r.Body.Close()
 
 			}
 
@@ -151,10 +155,7 @@ func (a *Agent) Start() {
 				MType: "counter",
 				Delta: &pollCount,
 			}
-			res, err := json.Marshal(m)
-			if err != nil {
-				fmt.Println(err)
-			}
+			res, _ := json.Marshal(m)
 
 			resp, _ := http.Post(a.host+"/update/", "application/json", bytes.NewBuffer(res))
 			defer resp.Body.Close()
@@ -169,19 +170,21 @@ func (a *Agent) Start() {
 			//}(a.host+"/update/", res)
 			//
 			m.Delta = nil
-			res, err = json.Marshal(m)
-			if err != nil {
-				fmt.Println(err)
-			}
+			res, _ = json.Marshal(m)
 
-			resp, _ = http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
-			_ = json.NewDecoder(resp.Body).Decode(&m)
-			fmt.Println(resp.Header.Get("Content-Type"))
+			r, err := http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
+			if err != nil {
+				fmt.Println("nil in counter response")
+				continue
+			}
+			_ = json.NewDecoder(r.Body).Decode(&m)
+			fmt.Println(r.Header.Get("Content-Type"))
 			if m.Delta == nil {
 				fmt.Println("Delta is nil")
 			} else {
 				fmt.Println(m.ID, *m.Delta)
 			}
+			defer r.Body.Close()
 
 			//go func(url string, js []byte) {
 			//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
