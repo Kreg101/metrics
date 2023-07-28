@@ -2,8 +2,8 @@ package agent
 
 import (
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"time"
 )
@@ -57,142 +57,171 @@ func getMapOfStats(stats *runtime.MemStats) map[string]float64 {
 	return res
 }
 
+//func (a *Agent) Start() {
+//	var pollCount int64
+//
+//	go func() {
+//		for range time.Tick(a.sendFreq) {
+//			for k, v := range getMapOfStats(&a.stats) {
+//				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
+//				go func(url string) {
+//					resp, err := http.Post(url, "text/plain", nil)
+//					if err != nil {
+//						fmt.Println(err)
+//					}
+//					defer resp.Body.Close()
+//				}(url)
+//
+//				/*
+//					resp, err := http.Post(url, "text/plain", nil)
+//					if err != nil {
+//						fmt.Println(err)
+//					}
+//					defer resp.Body.Close()
+//				*/
+//
+//				//m := communication.Metrics{
+//				//	ID:    k,
+//				//	MType: "gauge",
+//				//	Value: &v,
+//				//}
+//				//res, _ := json.Marshal(m)
+//				//
+//				//resp, _ := http.Post(a.host+"/update/", "application/json", bytes.NewBuffer(res))
+//				//defer resp.Body.Close()
+//
+//				//go func(url string, js []byte) {
+//				//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+//				//	if e != nil {
+//				//		fmt.Println(e)
+//				//	}
+//				//	fmt.Println(resp)
+//				//	defer resp.Body.Close()
+//				//}(a.host+"/update/", res)
+//
+//				//m.Value = nil
+//				//res, _ = json.Marshal(m)
+//				//if err != nil {
+//				//	fmt.Println(err)
+//				//}
+//				//go func(url string, js []byte) {
+//				//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+//				//	if e != nil {
+//				//		fmt.Println(e)
+//				//	}
+//				//	var m communication.Metrics
+//				//	_ = json.NewDecoder(resp.Body).Decode(&m)
+//				//	fmt.Println(m.ID, m.Value)
+//				//	defer resp.Body.Close()
+//				//}(a.host+"/value/", res)
+//				//r, err := http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
+//				//if err != nil {
+//				//	fmt.Println(err)
+//				//	continue
+//				//}
+//				//_ = json.NewDecoder(r.Body).Decode(&m)
+//				//fmt.Println(r.Header.Get("Content-Type"))
+//				//if m.Value == nil {
+//				//	fmt.Println(m.ID, "nil")
+//				//} else {
+//				//	fmt.Println(m.ID, *m.Value)
+//				//}
+//				//defer r.Body.Close()
+//
+//			}
+//
+//			//url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
+//			//go func(url string) {
+//			//	resp, err := http.Post(url, "text/plain", nil)
+//			//	if err != nil {
+//			//		fmt.Println(err)
+//			//	}
+//			//	defer resp.Body.Close()
+//			//}(url)
+//
+//			/*
+//				resp, err := http.Post(url, "text/plain", nil)
+//				if err != nil {
+//					fmt.Println(err)
+//				}
+//				defer resp.Body.Close()
+//			*/
+//
+//			m := communication.Metrics{
+//				ID:    "PollCount",
+//				MType: "counter",
+//				Delta: &pollCount,
+//			}
+//			res, _ := json.Marshal(m)
+//
+//			resp, _ := http.Post(a.host+"/update/", "application/json", bytes.NewBuffer(res))
+//			defer resp.Body.Close()
+//
+//			//go func(url string, js []byte) {
+//			//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+//			//	if e != nil {
+//			//		fmt.Println(e)
+//			//	}
+//			//	fmt.Println(resp)
+//			//	defer resp.Body.Close()
+//			//}(a.host+"/update/", res)
+//			//
+//			m.Delta = nil
+//			res, _ = json.Marshal(m)
+//
+//			r, err := http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
+//			if err != nil {
+//				fmt.Println("nil in counter response")
+//				continue
+//			}
+//			_ = json.NewDecoder(r.Body).Decode(&m)
+//			fmt.Println(r.Header.Get("Content-Type"))
+//			if m.Delta == nil {
+//				fmt.Println("Delta is nil")
+//			} else {
+//				fmt.Println(m.ID, *m.Delta)
+//			}
+//			defer r.Body.Close()
+//
+//			//go func(url string, js []byte) {
+//			//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+//			//	if e != nil {
+//			//		fmt.Println(e)
+//			//	}
+//			//	var m communication.Metrics
+//			//	_ = json.NewDecoder(resp.Body).Decode(&m)
+//			//	fmt.Println(m.ID, m.Delta)
+//			//	defer resp.Body.Close()
+//			//}(a.host+"/value/", res)
+//		}
+//	}()
+//
+//	for range time.Tick(a.updateFreq) {
+//		runtime.ReadMemStats(&a.stats)
+//		pollCount++
+//	}
+//}
+
 func (a *Agent) Start() {
-	var pollCount int64
+	client := resty.New()
+	var pollCount int
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(&a.stats) {
-				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
-				go func(url string) {
-					resp, err := http.Post(url, "text/plain", nil)
+				go func(host, k, v string, client *resty.Client) {
+					_, err := client.R().Post(host + "/update/gauge/" + k + "/" + v)
 					if err != nil {
 						fmt.Println(err)
 					}
-					defer resp.Body.Close()
-				}(url)
-
-				/*
-					resp, err := http.Post(url, "text/plain", nil)
-					if err != nil {
-						fmt.Println(err)
-					}
-					defer resp.Body.Close()
-				*/
-
-				//m := communication.Metrics{
-				//	ID:    k,
-				//	MType: "gauge",
-				//	Value: &v,
-				//}
-				//res, _ := json.Marshal(m)
-				//
-				//resp, _ := http.Post(a.host+"/update/", "application/json", bytes.NewBuffer(res))
-				//defer resp.Body.Close()
-
-				//go func(url string, js []byte) {
-				//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-				//	if e != nil {
-				//		fmt.Println(e)
-				//	}
-				//	fmt.Println(resp)
-				//	defer resp.Body.Close()
-				//}(a.host+"/update/", res)
-
-				//m.Value = nil
-				//res, _ = json.Marshal(m)
-				//if err != nil {
-				//	fmt.Println(err)
-				//}
-				//go func(url string, js []byte) {
-				//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-				//	if e != nil {
-				//		fmt.Println(e)
-				//	}
-				//	var m communication.Metrics
-				//	_ = json.NewDecoder(resp.Body).Decode(&m)
-				//	fmt.Println(m.ID, m.Value)
-				//	defer resp.Body.Close()
-				//}(a.host+"/value/", res)
-				//r, err := http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
-				//if err != nil {
-				//	fmt.Println(err)
-				//	continue
-				//}
-				//_ = json.NewDecoder(r.Body).Decode(&m)
-				//fmt.Println(r.Header.Get("Content-Type"))
-				//if m.Value == nil {
-				//	fmt.Println(m.ID, "nil")
-				//} else {
-				//	fmt.Println(m.ID, *m.Value)
-				//}
-				//defer r.Body.Close()
-
+				}(a.host, k, fmt.Sprintf("%f", v), client)
 			}
-
-			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
-			go func(url string) {
-				resp, err := http.Post(url, "text/plain", nil)
+			go func(host string, client *resty.Client) {
+				_, err := client.R().Post(host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount))
 				if err != nil {
 					fmt.Println(err)
 				}
-				defer resp.Body.Close()
-			}(url)
-
-			/*
-				resp, err := http.Post(url, "text/plain", nil)
-				if err != nil {
-					fmt.Println(err)
-				}
-				defer resp.Body.Close()
-			*/
-
-			//m := communication.Metrics{
-			//	ID:    "PollCount",
-			//	MType: "counter",
-			//	Delta: &pollCount,
-			//}
-			//res, _ := json.Marshal(m)
-			//
-			//resp, _ := http.Post(a.host+"/update/", "application/json", bytes.NewBuffer(res))
-			//defer resp.Body.Close()
-
-			//go func(url string, js []byte) {
-			//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-			//	if e != nil {
-			//		fmt.Println(e)
-			//	}
-			//	fmt.Println(resp)
-			//	defer resp.Body.Close()
-			//}(a.host+"/update/", res)
-			//
-			//m.Delta = nil
-			//res, _ = json.Marshal(m)
-			//
-			//r, err := http.Post(a.host+"/value/", "application/json", bytes.NewBuffer(res))
-			//if err != nil {
-			//	fmt.Println("nil in counter response")
-			//	continue
-			//}
-			//_ = json.NewDecoder(r.Body).Decode(&m)
-			//fmt.Println(r.Header.Get("Content-Type"))
-			//if m.Delta == nil {
-			//	fmt.Println("Delta is nil")
-			//} else {
-			//	fmt.Println(m.ID, *m.Delta)
-			//}
-			//defer r.Body.Close()
-
-			//go func(url string, js []byte) {
-			//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-			//	if e != nil {
-			//		fmt.Println(e)
-			//	}
-			//	var m communication.Metrics
-			//	_ = json.NewDecoder(resp.Body).Decode(&m)
-			//	fmt.Println(m.ID, m.Delta)
-			//	defer resp.Body.Close()
-			//}(a.host+"/value/", res)
+			}(a.host, client)
 		}
 	}()
 

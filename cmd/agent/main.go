@@ -8,7 +8,7 @@ func main() {
 
 	a := agent.NewAgent(flagPollInterval, flagReportInterval, "http://"+flagEndpoint)
 	a.Start()
-	//
+
 	//x := 1.23
 	//
 	//m := communication.Metrics{
