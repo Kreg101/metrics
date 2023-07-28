@@ -94,18 +94,20 @@ func (a *Agent) Start() {
 			for k, v := range getMapOfStats(&a.stats) {
 				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
 				go func(url string) {
-					_, err := http.Post(url, "text/plain", nil)
+					resp, err := http.Post(url, "text/plain", nil)
 					if err != nil {
 						fmt.Println(err)
 					}
+					defer resp.Body.Close()
 				}(url)
 			}
-			url := "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
+			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
 			go func(host string) {
-				_, err := http.Post(url, "text/plain", nil)
+				resp, err := http.Post(url, "text/plain", nil)
 				if err != nil {
 					fmt.Println(err)
 				}
+				defer resp.Body.Close()
 			}(url)
 		}
 	}()
