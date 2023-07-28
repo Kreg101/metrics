@@ -34,7 +34,7 @@ func getMapOfStats(stats *runtime.MemStats) map[string]float64 {
 	res["HeapAlloc"] = float64(stats.HeapAlloc)
 	res["HeapIdle"] = float64(stats.HeapIdle)
 	res["HeapInuse"] = float64(stats.HeapInuse)
-	res["HeapObject"] = float64(stats.HeapObjects)
+	res["HeapObjects"] = float64(stats.HeapObjects)
 	res["HeapReleased"] = float64(stats.HeapReleased)
 	res["HeapSys"] = float64(stats.HeapSys)
 	res["LastGC"] = float64(stats.LastGC)
