@@ -2,8 +2,8 @@ package agent
 
 import (
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"time"
 )
@@ -57,58 +57,28 @@ func getMapOfStats(stats *runtime.MemStats) map[string]float64 {
 	return res
 }
 
-//func (a *Agent) Start() {
-//	client := resty.New()
-//	var pollCount int64
-//
-//	go func() {
-//		for range time.Tick(a.sendFreq) {
-//			for k, v := range getMapOfStats(&a.stats) {
-//				go func(host, k, v string, client *resty.Client) {
-//					_, err := client.R().Post(host + "/update/gauge/" + k + "/" + v)
-//					if err != nil {
-//						fmt.Println(err)
-//					}
-//				}(a.host, k, fmt.Sprintf("%f", v), client)
-//			}
-//			go func(host string, client *resty.Client) {
-//				_, err := client.R().Post(host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount))
-//				if err != nil {
-//					fmt.Println(err)
-//				}
-//			}(a.host, client)
-//		}
-//	}()
-//
-//	for range time.Tick(a.updateFreq) {
-//		runtime.ReadMemStats(&a.stats)
-//		pollCount++
-//	}
-//}
-
 func (a *Agent) Start() {
+	client := resty.New()
 	var pollCount int64
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(&a.stats) {
 				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
-				go func(url string) {
-					_, err := http.Post(url, "text/plain", nil)
+				go func(url string, client *resty.Client) {
+					_, err := client.R().Post(url)
 					if err != nil {
 						fmt.Println(err)
 					}
-					//defer resp.Body.Close()
-				}(url)
+				}(url, client)
 			}
 			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
-			go func(host string) {
-				_, err := http.Post(url, "text/plain", nil)
+			go func(url string, client *resty.Client) {
+				_, err := client.R().Post(url)
 				if err != nil {
 					fmt.Println(err)
 				}
-				//defer resp.Body.Close()
-			}(url)
+			}(url, client)
 		}
 	}()
 
@@ -117,3 +87,36 @@ func (a *Agent) Start() {
 		pollCount++
 	}
 }
+
+//func (a *Agent) Start() {
+//	var pollCount int64
+//
+//	go func() {
+//		for range time.Tick(a.sendFreq) {
+//			for k, v := range getMapOfStats(&a.stats) {
+//				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
+//				go func(url string) {
+//					resp, err := http.Post(url, "text/plain", nil)
+//					if err != nil {
+//						fmt.Println(err)
+//					}
+//					fmt.Println(resp)
+//					defer resp.Body.Close()
+//				}(url)
+//			}
+//			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
+//			go func(host string) {
+//				resp, err := http.Post(url, "text/plain", nil)
+//				if err != nil {
+//					fmt.Println(err)
+//				}
+//				defer resp.Body.Close()
+//			}(url)
+//		}
+//	}()
+//
+//	for range time.Tick(a.updateFreq) {
+//		runtime.ReadMemStats(&a.stats)
+//		pollCount++
+//	}
+//}
