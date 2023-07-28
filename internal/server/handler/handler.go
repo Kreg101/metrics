@@ -119,13 +119,13 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		}
 		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
 
+		w.Header().Set("Content-Type", "application/json")
+
 		e := json.NewEncoder(w).Encode(m)
 		if e != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
 
 	case "gauge":
 		if m.Value == nil {
@@ -141,16 +141,13 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
+
 		e := json.NewEncoder(w).Encode(m)
 		if e != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-
-	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -175,13 +172,13 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	err = json.NewEncoder(w).Encode(m)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
 }
 
 func (mux *Mux) Router() chi.Router {
