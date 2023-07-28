@@ -90,6 +90,7 @@ func (a *Agent) Start() {
 					if e != nil {
 						fmt.Println(e)
 					}
+					fmt.Println(resp)
 					defer resp.Body.Close()
 				}(a.host+"/update/", res)
 
@@ -135,6 +136,7 @@ func (a *Agent) Start() {
 				if e != nil {
 					fmt.Println(e)
 				}
+				fmt.Println(resp)
 				defer resp.Body.Close()
 			}(a.host+"/update/", res)
 

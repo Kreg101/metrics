@@ -183,9 +183,9 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/", withLogging(mux.mainPage))
-	router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
-	router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
+	//router.Get("/", withLogging(mux.mainPage))
+	//router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
+	//router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
 	router.Post("/update/", withLogging(mux.updateMetricWithBody))
 	router.Post("/value/", withLogging(mux.getMetric))
 	return router
