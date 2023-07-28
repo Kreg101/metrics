@@ -3,14 +3,13 @@ package logger
 import (
 	"encoding/json"
 	"go.uber.org/zap"
-	"log"
 	"os"
 )
 
 func New(level string) *zap.SugaredLogger {
 	file, err := os.OpenFile("info.log", os.O_TRUNC|os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	defer file.Close()
 

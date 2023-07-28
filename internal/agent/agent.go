@@ -72,6 +72,7 @@ func (a *Agent) Start() {
 					}
 				}(url, client)
 			}
+
 			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
 			go func(url string, client *resty.Client) {
 				_, err := client.R().Post(url)
@@ -87,36 +88,3 @@ func (a *Agent) Start() {
 		pollCount++
 	}
 }
-
-//func (a *Agent) Start() {
-//	var pollCount int64
-//
-//	go func() {
-//		for range time.Tick(a.sendFreq) {
-//			for k, v := range getMapOfStats(&a.stats) {
-//				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
-//				go func(url string) {
-//					resp, err := http.Post(url, "text/plain", nil)
-//					if err != nil {
-//						fmt.Println(err)
-//					}
-//					fmt.Println(resp)
-//					defer resp.Body.Close()
-//				}(url)
-//			}
-//			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
-//			go func(host string) {
-//				resp, err := http.Post(url, "text/plain", nil)
-//				if err != nil {
-//					fmt.Println(err)
-//				}
-//				defer resp.Body.Close()
-//			}(url)
-//		}
-//	}()
-//
-//	for range time.Tick(a.updateFreq) {
-//		runtime.ReadMemStats(&a.stats)
-//		pollCount++
-//	}
-//}

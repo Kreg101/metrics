@@ -61,25 +61,31 @@ func withLogging(h http.HandlerFunc) http.HandlerFunc {
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("content-type", "text/html")
-	w.Write([]byte(metricsToString(mux.storage.GetAll())))
+	w.Write([]byte(metrics2String(mux.storage.GetAll())))
 }
 
 func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
+	log := logger.Default()
 	name := chi.URLParam(r, "name")
 	if v, ok := mux.storage.Get(name); ok {
 		if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("content-type", "text/plain")
-			w.Write([]byte(singleMetricToString(v)))
+			w.Write([]byte(singleMetric2String(v)))
 			return
 		}
+		log.Infof("mismatch metric type of %s in request and storage", name)
 	}
+
+	log.Infof("no metric %s in storage", name)
 	w.WriteHeader(http.StatusNotFound)
 }
 
 func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
+	log := logger.Default()
 	if chi.URLParam(r, "name") == "" {
 		w.WriteHeader(http.StatusNotFound)
+		log.Errorf("empty metric name")
 		return
 	}
 
@@ -88,27 +94,36 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 		res, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			log.Errorf("can't parse %s in float", chi.URLParam(r, "value"))
+			return
 		}
 		w.WriteHeader(http.StatusOK)
 		mux.storage.Add(chi.URLParam(r, "name"), storage.Gauge(res))
+
 	case "counter":
 		res, err := strconv.ParseInt(chi.URLParam(r, "value"), 10, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			log.Errorf("can't parse %s in double", chi.URLParam(r, "value"))
+			return
 		}
 		w.WriteHeader(http.StatusOK)
 		mux.storage.Add(chi.URLParam(r, "name"), storage.Counter(res))
+
 	default:
 		w.WriteHeader(http.StatusBadRequest)
+		log.Infof("wrong metric type: %s", chi.URLParam(r, "type"))
 	}
 }
 
 func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
+	log := logger.Default()
+
 	var m communication.Metrics
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("can't decode"))
+		log.Errorf("can't unmarshal json %s to %v", r.Body, m)
 		return
 	}
 
@@ -116,7 +131,7 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	case "counter":
 		if m.Delta == nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("get nil counter value"))
+			log.Errorf("empty counter value in request")
 			return
 		}
 		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
@@ -126,44 +141,47 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			m.Delta = &help
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("some shit"))
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-
-		e := json.NewEncoder(w).Encode(m)
-		if e != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("can't encode"))
+			log.Errorf("internal error; can't find the metric, which should be in storage")
 			return
 		}
 
 	case "gauge":
 		if m.Value == nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("get nil gauge value"))
+			log.Errorf("empty gauge value in request")
 			return
 		}
 		mux.storage.Add(m.ID, storage.Gauge(*m.Value))
 
-		w.Header().Set("Content-Type", "application/json")
+		//w.Header().Set("Content-Type", "application/json")
+		//
+		//e := json.NewEncoder(w).Encode(m)
+		//if e != nil {
+		//	w.WriteHeader(http.StatusInternalServerError)
+		//	log.Errorf("can't marshal %v", m)
+		//	return
+		//}
+	}
 
-		e := json.NewEncoder(w).Encode(m)
-		if e != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("can't encode gauge"))
-			return
-		}
+	w.Header().Set("Content-Type", "application/json")
+
+	e := json.NewEncoder(w).Encode(m)
+	if e != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Errorf("can't marshal %v", m)
+		return
 	}
 }
 
 func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
+	log := logger.Default()
+
 	var m communication.Metrics
 	err := json.NewDecoder(r.Body).Decode(&m)
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Decode:wrong"))
+		log.Errorf("can't unmarshal json %s to %v", r.Body, m)
 		return
 	}
 
@@ -179,12 +197,12 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("wrong type of metric"))
+			log.Infof("wrong type %s of metric %s", m.MType, m.ID)
 			return
 		}
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("no such metric"))
+		log.Infof("no %s metric in storage", m.ID)
 		return
 	}
 
@@ -193,7 +211,7 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(m)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Encode:wrong"))
+		log.Errorf("can't marshal %v", m)
 		return
 	}
 }
@@ -208,7 +226,7 @@ func (mux *Mux) Router() chi.Router {
 	return router
 }
 
-func metricsToString(m storage.Metrics) string {
+func metrics2String(m storage.Metrics) string {
 	list := make([]string, 0)
 	for k, v := range m {
 		var keyValue = k + ":"
@@ -223,7 +241,7 @@ func metricsToString(m storage.Metrics) string {
 	return strings.Join(list, ", ")
 }
 
-func singleMetricToString(v interface{}) string {
+func singleMetric2String(v interface{}) string {
 	switch res := v.(type) {
 	case storage.Gauge:
 		return float2String(float64(res))

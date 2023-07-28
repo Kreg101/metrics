@@ -49,7 +49,7 @@ func Test_metricsToString(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, metricsToString(tc.source))
+			assert.Equal(t, tc.want, metrics2String(tc.source))
 		})
 	}
 }
@@ -78,7 +78,7 @@ func Test_singleMetricToString(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, singleMetricToString(tc.source))
+			assert.Equal(t, tc.want, singleMetric2String(tc.source))
 		})
 	}
 }
