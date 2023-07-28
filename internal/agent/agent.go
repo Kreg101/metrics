@@ -1,10 +1,7 @@
 package agent
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/Kreg101/metrics/internal/communication"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -67,95 +64,111 @@ func (a *Agent) Start() {
 		for range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(&a.stats) {
 				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
-				go func(url string) {
-					resp, err := http.Post(url, "text/plain", nil)
-					if err != nil {
-						fmt.Println(err)
-					}
-					defer resp.Body.Close()
-				}(url)
+				//go func(url string) {
+				//	resp, err := http.Post(url, "text/plain", nil)
+				//	if err != nil {
+				//		fmt.Println(err)
+				//	}
+				//	defer resp.Body.Close()
+				//}(url)
 
-				m := communication.Metrics{
-					ID:    k,
-					MType: "gauge",
-					Value: &v,
-				}
-				res, err := json.Marshal(m)
-				if err != nil {
-					fmt.Println(err)
-				}
-
-				go func(url string, js []byte) {
-					resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-					if e != nil {
-						fmt.Println(e)
-					}
-					fmt.Println(resp)
-					defer resp.Body.Close()
-				}(a.host+"/update/", res)
-
-				m.Value = nil
-				res, err = json.Marshal(m)
-				if err != nil {
-					fmt.Println(err)
-				}
-				go func(url string, js []byte) {
-					resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-					if e != nil {
-						fmt.Println(e)
-					}
-					var m communication.Metrics
-					_ = json.NewDecoder(resp.Body).Decode(&m)
-					fmt.Println(m.ID, m.Value)
-					defer resp.Body.Close()
-				}(a.host+"/value/", res)
-
-			}
-
-			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
-			go func(url string) {
 				resp, err := http.Post(url, "text/plain", nil)
 				if err != nil {
 					fmt.Println(err)
 				}
 				defer resp.Body.Close()
-			}(url)
 
-			m := communication.Metrics{
-				ID:    "PollCount",
-				MType: "counter",
-				Delta: &pollCount,
+				//m := communication.Metrics{
+				//	ID:    k,
+				//	MType: "gauge",
+				//	Value: &v,
+				//}
+				//res, _ := json.Marshal(m)
+				//if _ != nil {
+				//	fmt.Println(_)
+				//}
+
+				//resp, _ = http.Post(url, "application/json", bytes.NewBuffer(res))
+				//defer resp.Body.Close()
+
+				//go func(url string, js []byte) {
+				//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+				//	if e != nil {
+				//		fmt.Println(e)
+				//	}
+				//	fmt.Println(resp)
+				//	defer resp.Body.Close()
+				//}(a.host+"/update/", res)
+
+				//m.Value = nil
+				//res, err = json.Marshal(m)
+				//if err != nil {
+				//	fmt.Println(err)
+				//}
+				//go func(url string, js []byte) {
+				//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+				//	if e != nil {
+				//		fmt.Println(e)
+				//	}
+				//	var m communication.Metrics
+				//	_ = json.NewDecoder(resp.Body).Decode(&m)
+				//	fmt.Println(m.ID, m.Value)
+				//	defer resp.Body.Close()
+				//}(a.host+"/value/", res)
+				//resp, _ = http.Post(url, "application/json", bytes.NewBuffer(res)
+				//defer resp.Body.Close()
+
 			}
-			res, err := json.Marshal(m)
+
+			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
+			//go func(url string) {
+			//	resp, err := http.Post(url, "text/plain", nil)
+			//	if err != nil {
+			//		fmt.Println(err)
+			//	}
+			//	defer resp.Body.Close()
+			//}(url)
+			resp, err := http.Post(url, "text/plain", nil)
 			if err != nil {
 				fmt.Println(err)
 			}
+			defer resp.Body.Close()
 
-			go func(url string, js []byte) {
-				resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-				if e != nil {
-					fmt.Println(e)
-				}
-				fmt.Println(resp)
-				defer resp.Body.Close()
-			}(a.host+"/update/", res)
-
-			m.Delta = nil
-			res, err = json.Marshal(m)
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			go func(url string, js []byte) {
-				resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
-				if e != nil {
-					fmt.Println(e)
-				}
-				var m communication.Metrics
-				_ = json.NewDecoder(resp.Body).Decode(&m)
-				fmt.Println(m.ID, m.Delta)
-				defer resp.Body.Close()
-			}(a.host+"/value/", res)
+			//m := communication.Metrics{
+			//	ID:    "PollCount",
+			//	MType: "counter",
+			//	Delta: &pollCount,
+			//}
+			//res, err := json.Marshal(m)
+			//if err != nil {
+			//	fmt.Println(err)
+			//}
+			//
+			//go func(url string, js []byte) {
+			//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+			//	if e != nil {
+			//		fmt.Println(e)
+			//	}
+			//	fmt.Println(resp)
+			//	defer resp.Body.Close()
+			//}(a.host+"/update/", res)
+			//
+			//m.Delta = nil
+			//res, err = json.Marshal(m)
+			//if err != nil {
+			//	fmt.Println(err)
+			//}
+			//
+			//go func(url string, js []byte) {
+			//	resp, e := http.Post(url, "application/json", bytes.NewBuffer(js))
+			//	if e != nil {
+			//		fmt.Println(e)
+			//	}
+			//	var m communication.Metrics
+			//	_ = json.NewDecoder(resp.Body).Decode(&m)
+			//	fmt.Println(m.ID, m.Delta)
+			//	defer resp.Body.Close()
+			//}(a.host+"/value/", res)
 		}
 	}()
 

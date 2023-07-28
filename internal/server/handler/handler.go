@@ -69,7 +69,7 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 	if v, ok := mux.storage.Get(name); ok {
 		if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
 			w.WriteHeader(http.StatusOK)
-			w.Header().Set("content-type", "application/json")
+			w.Header().Set("content-type", "text/plain")
 			w.Write([]byte(singleMetricToString(v)))
 			return
 		}
@@ -183,9 +183,9 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
-	//router.Get("/", withLogging(mux.mainPage))
-	//router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
-	//router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
+	router.Get("/", withLogging(mux.mainPage))
+	router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
+	router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
 	router.Post("/update/", withLogging(mux.updateMetricWithBody))
 	router.Post("/value/", withLogging(mux.getMetric))
 	return router
