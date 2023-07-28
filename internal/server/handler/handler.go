@@ -119,6 +119,13 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		}
 		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
 
+		if v, ok := mux.storage.Get(m.ID); ok {
+			*m.Delta = int64(v.(storage.Counter))
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 
 		e := json.NewEncoder(w).Encode(m)
@@ -133,13 +140,6 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		mux.storage.Add(m.ID, storage.Gauge(*m.Value))
-
-		if v, ok := mux.storage.Get(m.ID); ok {
-			*m.Value = float64(v.(storage.Gauge))
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 		w.Header().Set("Content-Type", "application/json")
 
@@ -169,7 +169,13 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 				tmp := float64(v.(storage.Gauge))
 				m.Value = &tmp
 			}
+		} else {
+			fmt.Println("wrong metric type")
+			return
 		}
+	} else {
+		fmt.Println("no such metric")
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
