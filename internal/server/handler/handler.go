@@ -73,6 +73,7 @@ func usingCompression(next http.HandlerFunc) http.HandlerFunc {
 			cw := newCompressWriter(w)
 			// меняем оригинальный http.ResponseWriter на новый
 			ow = cw
+			cw.Header().Set("Content-Encoding", "gzip")
 			// не забываем отправить клиенту все сжатые данные после завершения middleware
 			defer cw.Close()
 		}
@@ -94,11 +95,11 @@ func usingCompression(next http.HandlerFunc) http.HandlerFunc {
 
 		// передаём управление хендлеру
 		next.ServeHTTP(ow, r)
+
 	}
 }
 
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("content-type", "text/html")
 	w.Write([]byte(metrics2String(mux.storage.GetAll())))
 }
@@ -108,7 +109,6 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	if v, ok := mux.storage.Get(name); ok {
 		if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
-			w.WriteHeader(http.StatusOK)
 			w.Header().Set("content-type", "text/plain")
 			w.Write([]byte(singleMetric2String(v)))
 			return
