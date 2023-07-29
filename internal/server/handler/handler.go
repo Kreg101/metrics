@@ -73,7 +73,7 @@ func usingCompression(next http.HandlerFunc) http.HandlerFunc {
 			cw := newCompressWriter(w)
 			// меняем оригинальный http.ResponseWriter на новый
 			ow = cw
-			cw.Header().Set("Content-Encoding", "gzip")
+			ow.Header().Set("Content-Encoding", "gzip")
 			// не забываем отправить клиенту все сжатые данные после завершения middleware
 			defer cw.Close()
 		}
