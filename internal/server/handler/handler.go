@@ -247,11 +247,11 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/", usingLogger(mux.mainPage))
-	router.Get("/value/{type}/{name}", usingLogger(mux.metricPage))
-	router.Post("/update/{type}/{name}/{value}", usingLogger(mux.updateMetric))
-	router.Post("/update/", usingLogger(mux.updateMetricWithBody))
-	router.Post("/value/", usingLogger(mux.getMetric))
+	router.Get("/", usingLogger(usingCompression(mux.mainPage)))
+	router.Get("/value/{type}/{name}", usingLogger(usingCompression(mux.metricPage)))
+	router.Post("/update/{type}/{name}/{value}", usingLogger(usingCompression(mux.updateMetric)))
+	router.Post("/update/", usingLogger(usingCompression(mux.updateMetricWithBody)))
+	router.Post("/value/", usingLogger(usingCompression(mux.getMetric)))
 	return router
 }
 
