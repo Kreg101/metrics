@@ -100,7 +100,7 @@ func usingCompression(next http.HandlerFunc) http.HandlerFunc {
 
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("content-type", "application/json")
+	w.Header().Set("content-type", "text/html")
 	w.Write([]byte(metrics2String(mux.storage.GetAll())))
 }
 
@@ -110,7 +110,7 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 	if v, ok := mux.storage.Get(name); ok {
 		if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
 			w.WriteHeader(http.StatusOK)
-			w.Header().Set("content-type", "application/json")
+			w.Header().Set("content-type", "text/plain")
 			w.Write([]byte(singleMetric2String(v)))
 			return
 		}
@@ -231,11 +231,13 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
 			log.Infof("wrong type %s of metric %s", m.MType, m.ID)
 			return
 		}
 	} else {
 		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
 		log.Infof("no %s metric in storage", m.ID)
 		return
 	}
