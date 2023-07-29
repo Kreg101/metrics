@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// New for own logger configuration; need to do mo features
 func New(level string) *zap.SugaredLogger {
 	file, err := os.OpenFile("info.log", os.O_TRUNC|os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
@@ -42,6 +43,8 @@ func New(level string) *zap.SugaredLogger {
 
 var singleLogger = New("info")
 
+// Default if you use only this method, you guaranteed have only 1 logger
+// aka singleton
 func Default() *zap.SugaredLogger {
 	return singleLogger
 }

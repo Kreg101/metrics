@@ -136,8 +136,9 @@ func TestMux_Router(t *testing.T) {
 	ts := httptest.NewServer(mux.Router())
 	defer ts.Close()
 	type response struct {
-		statusCode int
-		body       string
+		statusCode  int
+		contentType string
+		body        string
 	}
 	tt := []struct {
 		name   string
@@ -149,67 +150,67 @@ func TestMux_Router(t *testing.T) {
 			name:   "main page",
 			url:    "/",
 			method: http.MethodGet,
-			want:   response{http.StatusOK, ""},
+			want:   response{http.StatusOK, "text/html", ""},
 		},
 		{
 			name:   "correct update counter request",
 			url:    "/update/counter/x/10",
 			method: http.MethodPost,
-			want:   response{http.StatusOK, ""},
+			want:   response{http.StatusOK, "text/plain", ""},
 		},
 		{
 			name:   "correct update gauge request",
 			url:    "/update/gauge/y/1.23",
 			method: http.MethodPost,
-			want:   response{http.StatusOK, ""},
+			want:   response{http.StatusOK, "text/plain", ""},
 		},
 		{
 			name:   "no metric name in update request #1",
 			url:    "/update/counter//10",
 			method: http.MethodPost,
-			want:   response{http.StatusNotFound, ""},
+			want:   response{http.StatusNotFound, "text/plain", ""},
 		},
 		{
 			name:   "no metric name in update request #2",
 			url:    "/update/counter",
 			method: http.MethodPost,
-			want:   response{http.StatusNotFound, "404 page not found\n"},
+			want:   response{http.StatusNotFound, "text/plain", "404 page not found\n"},
 		},
 		{
 			name:   "invalid counter type value",
 			url:    "/update/counter/x/abc",
 			method: http.MethodPost,
-			want:   response{http.StatusBadRequest, ""},
+			want:   response{http.StatusBadRequest, "text/plain", ""},
 		},
 		{
 			name:   "invalid gauge type value",
 			url:    "/update/counter/x/abc",
 			method: http.MethodPost,
-			want:   response{http.StatusBadRequest, ""},
+			want:   response{http.StatusBadRequest, "text/plain", ""},
 		},
 		{
 			name:   "invalid metric type",
 			url:    "/update/counte/x/abc",
 			method: http.MethodPost,
-			want:   response{http.StatusBadRequest, ""},
+			want:   response{http.StatusBadRequest, "text/plaint", ""},
 		},
 		{
 			name:   "single metric request",
 			url:    "/value/counter/x",
 			method: http.MethodGet,
-			want:   response{statusCode: http.StatusOK, body: "10"},
+			want:   response{http.StatusOK, "text/plain", "10"},
 		},
 		{
 			name:   "invalid metric type request",
 			url:    "/value/cor/x",
 			method: http.MethodGet,
-			want:   response{statusCode: http.StatusNotFound, body: ""},
+			want:   response{http.StatusNotFound, "text/plain", ""},
 		},
 		{
 			name:   "no metric in storage",
 			url:    "/value/counter/z",
 			method: http.MethodGet,
-			want:   response{statusCode: http.StatusNotFound, body: ""},
+			want:   response{http.StatusNotFound, "text/plain", ""},
 		},
 	}
 	for _, tc := range tt {

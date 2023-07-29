@@ -31,7 +31,7 @@ func NewMux(storage Repository) *Mux {
 	return mux
 }
 
-func withLogging(h http.HandlerFunc) http.HandlerFunc {
+func usingLogger(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// due to the use of aka singleton pattern this log will be the same
 		// as log in main
@@ -55,6 +55,45 @@ func withLogging(h http.HandlerFunc) http.HandlerFunc {
 			"duration", duration,
 			"size", responseData.size,
 		)
+	}
+}
+
+func usingCompression(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
+		// который будем передавать следующей функции
+		ow := w
+
+		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		supportsGzip := strings.Contains(acceptEncoding, "gzip")
+		if supportsGzip {
+			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
+			cw := newCompressWriter(w)
+			// меняем оригинальный http.ResponseWriter на новый
+			ow = cw
+			// не забываем отправить клиенту все сжатые данные после завершения middleware
+			defer cw.Close()
+		}
+
+		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
+		contentEncoding := r.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+		if sendsGzip {
+			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
+			cr, err := newCompressReader(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			// меняем тело запроса на новое
+			r.Body = cr
+			defer cr.Close()
+		}
+
+		// передаём управление хендлеру
+		next.ServeHTTP(ow, r)
 	}
 }
 
@@ -152,15 +191,6 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		mux.storage.Add(m.ID, storage.Gauge(*m.Value))
-
-		//w.Header().Set("Content-Type", "application/json")
-		//
-		//e := json.NewEncoder(w).Encode(m)
-		//if e != nil {
-		//	w.WriteHeader(http.StatusInternalServerError)
-		//	log.Errorf("can't marshal %v", m)
-		//	return
-		//}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -218,11 +248,11 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/", withLogging(mux.mainPage))
-	router.Get("/value/{type}/{name}", withLogging(mux.metricPage))
-	router.Post("/update/{type}/{name}/{value}", withLogging(mux.updateMetric))
-	router.Post("/update/", withLogging(mux.updateMetricWithBody))
-	router.Post("/value/", withLogging(mux.getMetric))
+	router.Get("/", usingLogger(mux.mainPage))
+	router.Get("/value/{type}/{name}", usingLogger(mux.metricPage))
+	router.Post("/update/{type}/{name}/{value}", usingLogger(mux.updateMetric))
+	router.Post("/update/", usingLogger(mux.updateMetricWithBody))
+	router.Post("/value/", usingLogger(mux.getMetric))
 	return router
 }
 
