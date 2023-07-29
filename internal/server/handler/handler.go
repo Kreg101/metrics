@@ -231,13 +231,11 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			w.Header().Set("Content-Type", "application/json")
 			log.Infof("wrong type %s of metric %s", m.MType, m.ID)
 			return
 		}
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		w.Header().Set("Content-Type", "application/json")
 		log.Infof("no %s metric in storage", m.ID)
 		return
 	}
