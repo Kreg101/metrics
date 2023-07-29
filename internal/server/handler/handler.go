@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/Kreg101/metrics/internal/communication"
@@ -194,17 +193,13 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		mux.storage.Add(m.ID, storage.Gauge(*m.Value))
 	}
 
-	var b bytes.Buffer
-	e := json.NewEncoder(&b).Encode(m)
+	w.Header().Set("Content-Type", "application/json")
+	e := json.NewEncoder(w).Encode(m)
 	if e != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("can't marshal %v", m)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(b.Bytes())
 }
 
 func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
@@ -240,18 +235,14 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var b bytes.Buffer
+	w.Header().Set("Content-Type", "application/json")
 
-	err = json.NewEncoder(&b).Encode(m)
+	err = json.NewEncoder(w).Encode(m)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("can't marshal %v", m)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(b.Bytes())
 }
 
 func (mux *Mux) Router() chi.Router {
