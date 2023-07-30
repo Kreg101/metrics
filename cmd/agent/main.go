@@ -11,7 +11,7 @@ func main() {
 
 	//x := 1.23
 	//
-	//m := communication.Metrics{
+	//m := metric.Metrics{
 	//	ID:    "sys",
 	//	MType: "gauge",
 	//	Value: &x,
@@ -24,7 +24,7 @@ func main() {
 	//
 	//fmt.Println(string(res))
 	//
-	//var s communication.Metrics
+	//var s metric.Metrics
 	//
 	//err = json.Unmarshal(res, &s)
 	//

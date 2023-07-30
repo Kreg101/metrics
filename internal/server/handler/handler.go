@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Kreg101/metrics/internal/communication"
+	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
@@ -15,10 +15,9 @@ import (
 )
 
 type Repository interface {
-	Add(key string, value interface{})
+	Add(metric.Metric)
 	GetAll() storage.Metrics
-	Get(name string) (interface{}, bool)
-	CheckType(name string) string
+	Get(name string) (metric.Metric, bool)
 }
 
 type Mux struct {
@@ -107,15 +106,14 @@ func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
 func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 	log := logger.Default()
 	name := chi.URLParam(r, "name")
-	if v, ok := mux.storage.Get(name); ok {
-		if mux.storage.CheckType(name) == chi.URLParam(r, "type") {
+	if m, ok := mux.storage.Get(name); ok {
+		if m.MType == chi.URLParam(r, "type") {
 			w.Header().Set("content-type", "text/plain")
-			w.Write([]byte(singleMetric2String(v)))
+			w.Write([]byte(singleMetric2String(m)))
 			return
 		}
 		log.Infof("mismatch metric type of %s in request and storage", name)
 	}
-
 	log.Infof("no metric %s in storage", name)
 	w.WriteHeader(http.StatusNotFound)
 }
@@ -137,7 +135,12 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		mux.storage.Add(chi.URLParam(r, "name"), storage.Gauge(res))
+		mux.storage.Add(metric.Metric{
+			ID:    chi.URLParam(r, "name"),
+			MType: "gauge",
+			Value: &res,
+			Delta: nil,
+		})
 
 	case "counter":
 		res, err := strconv.ParseInt(chi.URLParam(r, "value"), 10, 64)
@@ -147,7 +150,12 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		mux.storage.Add(chi.URLParam(r, "name"), storage.Counter(res))
+		mux.storage.Add(metric.Metric{
+			ID:    chi.URLParam(r, "name"),
+			MType: "counter",
+			Value: nil,
+			Delta: &res,
+		})
 
 	default:
 		w.WriteHeader(http.StatusBadRequest)
@@ -158,7 +166,7 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	log := logger.Default()
 
-	var m communication.Metrics
+	var m metric.Metric
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -173,16 +181,16 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			log.Errorf("empty counter value in request")
 			return
 		}
-		mux.storage.Add(m.ID, storage.Counter(*m.Delta))
+		//mux.storage.Add(m)
 
-		if v, ok := mux.storage.Get(m.ID); ok {
-			help := int64(v.(storage.Counter))
-			m.Delta = &help
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Errorf("internal error; can't find the metric, which should be in storage")
-			return
-		}
+		//if v, ok := mux.storage.Get(m.ID); ok {
+		//	help := int64(v.(storage.Counter))
+		//	m.Delta = &help
+		//} else {
+		//	w.WriteHeader(http.StatusInternalServerError)
+		//	log.Errorf("internal error; can't find the metric, which should be in storage")
+		//	return
+		//}
 
 	case "gauge":
 		if m.Value == nil {
@@ -190,8 +198,8 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 			log.Errorf("empty gauge value in request")
 			return
 		}
-		mux.storage.Add(m.ID, storage.Gauge(*m.Value))
 	}
+	mux.storage.Add(m)
 
 	w.Header().Set("Content-Type", "application/json")
 	e := json.NewEncoder(w).Encode(m)
@@ -205,7 +213,7 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	log := logger.Default()
 
-	var m communication.Metrics
+	var m metric.Metric
 	err := json.NewDecoder(r.Body).Decode(&m)
 
 	if err != nil {
@@ -215,13 +223,13 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := mux.storage.Get(m.ID); ok {
-		if mux.storage.CheckType(m.ID) == m.MType {
+		if v.MType == m.MType {
 			switch m.MType {
 			case "counter":
-				tmp := int64(v.(storage.Counter))
+				tmp := *v.Delta
 				m.Delta = &tmp
 			case "gauge":
-				tmp := float64(v.(storage.Gauge))
+				tmp := *v.Value
 				m.Value = &tmp
 			}
 		} else {
@@ -259,23 +267,23 @@ func metrics2String(m storage.Metrics) string {
 	list := make([]string, 0)
 	for k, v := range m {
 		var keyValue = k + ":"
-		switch res := v.(type) {
-		case storage.Gauge:
-			keyValue += float2String(float64(res))
-		case storage.Counter:
-			keyValue += fmt.Sprintf("%d", res)
+		switch v.MType {
+		case "gauge":
+			keyValue += float2String(*v.Value)
+		case "counter":
+			keyValue += fmt.Sprintf("%d", *v.Delta)
 		}
 		list = append(list, keyValue)
 	}
 	return strings.Join(list, ", ")
 }
 
-func singleMetric2String(v interface{}) string {
-	switch res := v.(type) {
-	case storage.Gauge:
-		return float2String(float64(res))
-	case storage.Counter:
-		return fmt.Sprintf("%d", res)
+func singleMetric2String(m metric.Metric) string {
+	switch m.MType {
+	case "gauge":
+		return float2String(*m.Value)
+	case "counter":
+		return fmt.Sprintf("%d", *m.Delta)
 	}
 	return ""
 }

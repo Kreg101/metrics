@@ -8,15 +8,20 @@ import (
 
 func main() {
 
-	parseFlags()
+	parseConfiguration()
 
 	log := logger.Default()
 	defer log.Sync()
 
-	repository := storage.NewStorage()
+	fileWrite = false
+	repository, err := storage.NewStorage(storagePath, storeInterval, fileWrite, restore)
+	if err != nil {
+		//fmt.Println("here")
+		log.Fatalf("can't initialize storage: %e", err)
+	}
 
 	s := server.NewServer(repository)
-	err := s.Start(flagEndpoint)
+	err = s.Start(endpoint)
 	if err != nil {
 		log.Fatalf("can't start server: %e", err)
 	}
