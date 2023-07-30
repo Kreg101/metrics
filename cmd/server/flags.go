@@ -17,7 +17,7 @@ var (
 
 func parseConfiguration() {
 	flag.StringVar(&endpoint, "a", ":8080", "address and port to run server")
-	flag.StringVar(&storagePath, "f", "/tmp/metricsdb.json", "file to store metrics")
+	flag.StringVar(&storagePath, "f", "/tmp/metrics-db.json", "file to store metrics")
 	flag.IntVar(&storeInterval, "i", 10, "interval for saving data on disk")
 	flag.BoolVar(&restore, "r", true, "load metrics from file")
 	flag.Parse()

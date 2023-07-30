@@ -30,23 +30,7 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 		return storage, nil
 	}
 
-	//var help string
-	//for i, x := range strings.Split(path, "/") {
-	//	if i != len(strings.Split(path, "/"))-1 && x != "" {
-	//		help += "/" + x
-	//		fmt.Println(help)
-	//		err := os.Mkdir(help, 0666)
-	//		if err != nil {
-	//			fmt.Println("haahah")
-	//			return nil, err
-	//		}
-	//	}
-	//}
-	//err := os.Mkdir("tmp", 0666)
-	//if err != nil {
-	//	fmt.Println("rrrrr")
-	//	return nil, err
-	//}
+	_ = os.Mkdir(path, 0755)
 
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
