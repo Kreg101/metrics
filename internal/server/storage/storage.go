@@ -1,7 +1,10 @@
 package storage
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/server/logger"
 	"os"
 	"sync"
 	"time"
@@ -12,20 +15,11 @@ type Metrics map[string]metric.Metric
 type Storage struct {
 	metrics           Metrics
 	mutex             *sync.RWMutex
-	file              *os.File
+	consumer          *Consumer
+	producer          *Producer
 	storeInterval     time.Duration
 	syncWritingToFile bool
 }
-
-// NewStorage return pointer to Storage with initialized metrics field
-//func NewStorage() *Storage {
-//	storage := &Storage{}
-//	storage.metrics = Metrics{}
-//	storage.mutex = &sync.RWMutex{}
-//	storage.syncWritingToFile = false
-//	storage.file = nil
-//	return storage
-//}
 
 func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*Storage, error) {
 	storage := &Storage{}
@@ -36,19 +30,41 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 		return storage, nil
 	}
 
-	var err error
-	storage.file, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	//var help string
+	//for i, x := range strings.Split(path, "/") {
+	//	if i != len(strings.Split(path, "/"))-1 && x != "" {
+	//		help += "/" + x
+	//		fmt.Println(help)
+	//		err := os.Mkdir(help, 0666)
+	//		if err != nil {
+	//			fmt.Println("haahah")
+	//			return nil, err
+	//		}
+	//	}
+	//}
+	//err := os.Mkdir("tmp", 0666)
+	//if err != nil {
+	//	fmt.Println("rrrrr")
+	//	return nil, err
+	//}
+
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
+		fmt.Println("lox")
 		return nil, err
 	}
 
+	storage.producer = &Producer{file, json.NewEncoder(file)}
+	storage.consumer = &Consumer{file, json.NewDecoder(file)}
+
 	if loadFromFile {
-		// TODO load previous metrics from file
+		storage.metrics, err = storage.consumer.LoadFile()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if storeInterval != 0 {
-		// TODO write special goroutine to read from file
-	} else {
+	if storeInterval == 0 {
 		storage.syncWritingToFile = true
 	}
 
@@ -56,6 +72,7 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 }
 
 func (s *Storage) Add(m metric.Metric) {
+	log := logger.Default()
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if m.MType == "counter" {
@@ -64,6 +81,12 @@ func (s *Storage) Add(m metric.Metric) {
 		}
 	}
 	s.metrics[m.ID] = m
+	if s.syncWritingToFile {
+		err := s.producer.WriteMetric(&m)
+		if err != nil {
+			log.Fatalf("can't add metric %v to file: %e", &m, err)
+		}
+	}
 }
 
 func (s *Storage) GetAll() Metrics {
@@ -85,17 +108,3 @@ func (s *Storage) Get(name string) (metric.Metric, bool) {
 	}
 	return metric.Metric{}, false
 }
-
-// CheckType returns string, because it's easier to compare result with pattern
-// in handler's functions
-//func (s *Storage) CheckType(name string) string {
-//	s.mutex.RLock()
-//	defer s.mutex.RUnlock()
-//	switch s.metrics[name].(type) {
-//	case Gauge:
-//		return "gauge"
-//	case Counter:
-//		return "counter"
-//	}
-//	return ""
-//}

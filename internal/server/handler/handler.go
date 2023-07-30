@@ -2,12 +2,11 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/Kreg101/metrics/internal/algorithms"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -100,7 +99,7 @@ func usingCompression(next http.HandlerFunc) http.HandlerFunc {
 
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/html")
-	w.Write([]byte(metrics2String(mux.storage.GetAll())))
+	w.Write([]byte(algorithms.Metrics2String(mux.storage.GetAll())))
 }
 
 func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +108,7 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 	if m, ok := mux.storage.Get(name); ok {
 		if m.MType == chi.URLParam(r, "type") {
 			w.Header().Set("content-type", "text/plain")
-			w.Write([]byte(singleMetric2String(m)))
+			w.Write([]byte(algorithms.SingleMetric2String(m)))
 			return
 		}
 		log.Infof("mismatch metric type of %s in request and storage", name)
@@ -261,36 +260,4 @@ func (mux *Mux) Router() chi.Router {
 	router.Post("/update/", usingLogger(usingCompression(mux.updateMetricWithBody)))
 	router.Post("/value/", usingLogger(usingCompression(mux.getMetric)))
 	return router
-}
-
-func metrics2String(m storage.Metrics) string {
-	list := make([]string, 0)
-	for k, v := range m {
-		var keyValue = k + ":"
-		switch v.MType {
-		case "gauge":
-			keyValue += float2String(*v.Value)
-		case "counter":
-			keyValue += fmt.Sprintf("%d", *v.Delta)
-		}
-		list = append(list, keyValue)
-	}
-	return strings.Join(list, ", ")
-}
-
-func singleMetric2String(m metric.Metric) string {
-	switch m.MType {
-	case "gauge":
-		return float2String(*m.Value)
-	case "counter":
-		return fmt.Sprintf("%d", *m.Delta)
-	}
-	return ""
-}
-
-func float2String(v float64) string {
-	if math.Trunc(v) == v {
-		return fmt.Sprintf("%.0f", v)
-	}
-	return strings.TrimRight(fmt.Sprintf("%.3f", v), "0")
 }

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"github.com/Kreg101/metrics/internal/server"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
+	"time"
 )
 
 func main() {
@@ -13,13 +15,20 @@ func main() {
 	log := logger.Default()
 	defer log.Sync()
 
-	fileWrite = false
 	repository, err := storage.NewStorage(storagePath, storeInterval, fileWrite, restore)
 	if err != nil {
-		//fmt.Println("here")
 		log.Fatalf("can't initialize storage: %e", err)
 	}
 
+	if storeInterval != 0 {
+		go func(s *storage.Storage, d time.Duration) {
+			for range time.Tick(d) {
+				s.Write()
+			}
+		}(repository, time.Duration(storeInterval)*time.Second)
+	}
+
+	fmt.Println("here")
 	s := server.NewServer(repository)
 	err = s.Start(endpoint)
 	if err != nil {
