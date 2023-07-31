@@ -26,7 +26,7 @@ func main() {
 			}
 		}(repository, time.Duration(storeInterval)*time.Second)
 	}
-
+	
 	s := server.NewServer(repository)
 	err = s.Start(endpoint)
 	if err != nil {

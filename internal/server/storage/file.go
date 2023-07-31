@@ -75,6 +75,8 @@ func (f *Filer) LoadFile() (Metrics, error) {
 func (s *Storage) Write() {
 	log := logger.Default()
 
+	fmt.Println("here")
+
 	if err := os.Truncate(s.filer.file.Name(), 0); err != nil {
 		log.Errorf("failed to truncate: %v", err)
 		return

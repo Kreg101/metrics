@@ -32,7 +32,7 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	//defer file.Close()
 
 	storage.filer = &Filer{file, json.NewEncoder(file), json.NewDecoder(file)}
 	//storage.consumer = &Consumer{file, json.NewDecoder(file)}
