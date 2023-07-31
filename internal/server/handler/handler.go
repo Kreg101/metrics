@@ -168,18 +168,7 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		log.Errorf("empty delta or value in request")
 		return
 	}
-	//switch m.MType {
-	//case "counter":
-	//	if m.Delta == nil {
-	//
-	//	}
-	//case "gauge":
-	//	if m.Value == nil {
-	//		w.WriteHeader(http.StatusBadRequest)
-	//		log.Errorf("empty gauge value in request")
-	//		return
-	//	}
-	//}
+
 	mux.storage.Add(m)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -207,11 +196,11 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		if v.MType == m.MType {
 			switch m.MType {
 			case "counter":
-				tmp := *v.Delta
-				m.Delta = &tmp
+				//tmp := *v.Delta
+				m.Delta = v.Delta
 			case "gauge":
-				tmp := *v.Value
-				m.Value = &tmp
+				//tmp := *v.Value
+				m.Value = v.Value
 			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
