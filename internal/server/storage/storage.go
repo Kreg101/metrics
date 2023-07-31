@@ -14,8 +14,7 @@ type Metrics map[string]metric.Metric
 type Storage struct {
 	metrics           Metrics
 	mutex             *sync.RWMutex
-	consumer          *Consumer
-	producer          *Producer
+	filer             *Filer
 	storeInterval     time.Duration
 	syncWritingToFile bool
 }
@@ -35,11 +34,11 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 	}
 	defer file.Close()
 
-	storage.producer = &Producer{file, json.NewEncoder(file)}
-	storage.consumer = &Consumer{file, json.NewDecoder(file)}
+	storage.filer = &Filer{file, json.NewEncoder(file), json.NewDecoder(file)}
+	//storage.consumer = &Consumer{file, json.NewDecoder(file)}
 
 	if loadFromFile {
-		storage.metrics, err = storage.consumer.LoadFile()
+		storage.metrics, err = storage.filer.LoadFile()
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +62,7 @@ func (s *Storage) Add(m metric.Metric) {
 	}
 	s.metrics[m.ID] = m
 	if s.syncWritingToFile {
-		err := s.producer.WriteMetric(&m)
+		err := s.filer.WriteMetric(&m)
 		if err != nil {
 			log.Fatalf("can't add metric %v to file: %e", &m, err)
 		}

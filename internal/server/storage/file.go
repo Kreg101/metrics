@@ -10,35 +10,23 @@ import (
 	"os"
 )
 
-type Producer struct {
+type Filer struct {
 	file    *os.File
 	encoder *json.Encoder
-}
-
-func (p *Producer) WriteMetric(m *metric.Metric) error {
-	return p.encoder.Encode(&m)
-}
-
-func (p *Producer) Close() error {
-	return p.file.Close()
-}
-
-type Consumer struct {
-	file    *os.File
 	decoder *json.Decoder
 }
 
-func (c *Consumer) ReadMetric() (*metric.Metric, error) {
+func (f *Filer) WriteMetric(m *metric.Metric) error {
+	return f.encoder.Encode(&m)
+}
+
+func (f *Filer) ReadMetric() (*metric.Metric, error) {
 	event := &metric.Metric{}
-	if err := c.decoder.Decode(&event); err != nil {
+	if err := f.decoder.Decode(&event); err != nil {
 		return nil, err
 	}
 
 	return event, nil
-}
-
-func (c *Consumer) Close() error {
-	return c.file.Close()
 }
 
 func lineCounter(r io.Reader) (int, error) {
@@ -60,9 +48,9 @@ func lineCounter(r io.Reader) (int, error) {
 	}
 }
 
-func (c *Consumer) LoadFile() (Metrics, error) {
+func (f *Filer) LoadFile() (Metrics, error) {
 	s := Metrics{}
-	help, err := os.Open(c.file.Name())
+	help, err := os.Open(f.file.Name())
 
 	if err != nil {
 		return nil, err
@@ -74,7 +62,7 @@ func (c *Consumer) LoadFile() (Metrics, error) {
 	}
 
 	for i := 0; i < count; i++ {
-		m, err := c.ReadMetric()
+		m, err := f.ReadMetric()
 		if err != nil {
 			return nil, err
 		}
@@ -87,14 +75,14 @@ func (c *Consumer) LoadFile() (Metrics, error) {
 func (s *Storage) Write() {
 	log := logger.Default()
 
-	if err := os.Truncate(s.producer.file.Name(), 0); err != nil {
+	if err := os.Truncate(s.filer.file.Name(), 0); err != nil {
 		log.Errorf("failed to truncate: %v", err)
 		return
 	}
 
 	for _, m := range s.GetAll() {
 		fmt.Println(m)
-		err := s.producer.WriteMetric(&m)
+		err := s.filer.WriteMetric(&m)
 		if err != nil {
 			log.Errorf("can't add metric %v to file: %s", m, err)
 		}
