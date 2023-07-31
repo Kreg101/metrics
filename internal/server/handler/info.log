@@ -1,0 +1,17 @@
+{"level":"info","message":"uri / method GET status 0 duration 0 size 23"}
+{"level":"info","message":"uri /update/counter/x/10 method POST status 200 duration 0 size 23"}
+{"level":"info","message":"uri /update/gauge/y/1.23 method POST status 200 duration 1 size 23"}
+{"level":"error","message":"empty metric name"}
+{"level":"info","message":"uri /update/counter//10 method POST status 404 duration 0 size 23"}
+{"level":"error","message":"can't parse abc in double"}
+{"level":"info","message":"uri /update/counter/x/abc method POST status 400 duration 0 size 23"}
+{"level":"error","message":"can't parse abc in double"}
+{"level":"info","message":"uri /update/counter/x/abc method POST status 400 duration 1 size 23"}
+{"level":"info","message":"wrong metric type: counte"}
+{"level":"info","message":"uri /update/counte/x/abc method POST status 400 duration 0 size 23"}
+{"level":"info","message":"uri /value/counter/x method GET status 0 duration 0 size 26"}
+{"level":"info","message":"mismatch metric type of x in request and storage"}
+{"level":"info","message":"no metric x in storage"}
+{"level":"info","message":"uri /value/cor/x method GET status 404 duration 1 size 23"}
+{"level":"info","message":"no metric z in storage"}
+{"level":"info","message":"uri /value/counter/z method GET status 404 duration 0 size 23"}

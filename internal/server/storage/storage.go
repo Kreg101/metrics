@@ -32,10 +32,8 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 	if err != nil {
 		return nil, err
 	}
-	//defer file.Close()
 
 	storage.filer = &Filer{file, json.NewEncoder(file), json.NewDecoder(file)}
-	//storage.consumer = &Consumer{file, json.NewDecoder(file)}
 
 	if loadFromFile {
 		storage.metrics, err = storage.filer.LoadFile()
@@ -64,7 +62,7 @@ func (s *Storage) Add(m metric.Metric) {
 	if s.syncWritingToFile {
 		err := s.filer.WriteMetric(&m)
 		if err != nil {
-			log.Fatalf("can't add metric %v to file: %e", &m, err)
+			log.Errorf("can't add metric %v to file: %e", &m, err)
 		}
 	}
 }

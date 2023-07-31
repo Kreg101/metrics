@@ -59,41 +59,31 @@ func usingLogger(h http.HandlerFunc) http.HandlerFunc {
 func usingCompression(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
-		// который будем передавать следующей функции
 		ow := w
 
-		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
 		acceptEncoding := r.Header.Get("Accept-Encoding")
 		supportsGzip := strings.Contains(acceptEncoding, "gzip")
 		if supportsGzip {
-			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
 			cw := newCompressWriter(w)
-			// меняем оригинальный http.ResponseWriter на новый
 			ow = cw
 			ow.Header().Set("Content-Encoding", "gzip")
-			// не забываем отправить клиенту все сжатые данные после завершения middleware
 			defer cw.Close()
 		}
 
-		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 		if sendsGzip {
-			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			// меняем тело запроса на новое
+
 			r.Body = cr
 			defer cr.Close()
 		}
 
-		// передаём управление хендлеру
 		next.ServeHTTP(ow, r)
-
 	}
 }
 
@@ -173,31 +163,23 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch m.MType {
-	case "counter":
-		if m.Delta == nil {
-			w.WriteHeader(http.StatusBadRequest)
-			log.Errorf("empty counter value in request")
-			return
-		}
-		//mux.storage.Add(m)
-
-		//if v, ok := mux.storage.Get(m.ID); ok {
-		//	help := int64(v.(storage.Counter))
-		//	m.Delta = &help
-		//} else {
-		//	w.WriteHeader(http.StatusInternalServerError)
-		//	log.Errorf("internal error; can't find the metric, which should be in storage")
-		//	return
-		//}
-
-	case "gauge":
-		if m.Value == nil {
-			w.WriteHeader(http.StatusBadRequest)
-			log.Errorf("empty gauge value in request")
-			return
-		}
+	if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Errorf("empty delta or value in request")
+		return
 	}
+	//switch m.MType {
+	//case "counter":
+	//	if m.Delta == nil {
+	//
+	//	}
+	//case "gauge":
+	//	if m.Value == nil {
+	//		w.WriteHeader(http.StatusBadRequest)
+	//		log.Errorf("empty gauge value in request")
+	//		return
+	//	}
+	//}
 	mux.storage.Add(m)
 
 	w.Header().Set("Content-Type", "application/json")
