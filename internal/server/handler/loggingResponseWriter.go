@@ -3,11 +3,15 @@ package handler
 import "net/http"
 
 type (
+
+	// responseData - структура, хранящая данные о запросе
 	responseData struct {
 		status int
 		size   int
 	}
 
+	// loggingResponseWriter реализует интерфейс http.ResponseWrite, поэтому подменяется в
+	// middleware и получает необходимую информацию для responseData
 	loggingResponseWriter struct {
 		http.ResponseWriter
 		responseData *responseData

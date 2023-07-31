@@ -10,17 +10,19 @@ import (
 	"os"
 )
 
+// Filer - структура для записи и чтения хранилища из файла. Переодичность записи, нужно ли загружать
+// прошле метрики из файла при старте, это определяется конфигурацией
 type Filer struct {
 	file    *os.File
 	encoder *json.Encoder
 	decoder *json.Decoder
 }
 
-func (f *Filer) WriteMetric(m *metric.Metric) error {
+func (f Filer) WriteMetric(m *metric.Metric) error {
 	return f.encoder.Encode(&m)
 }
 
-func (f *Filer) ReadMetric() (*metric.Metric, error) {
+func (f Filer) ReadMetric() (*metric.Metric, error) {
 	event := &metric.Metric{}
 	if err := f.decoder.Decode(&event); err != nil {
 		return nil, err
@@ -29,6 +31,9 @@ func (f *Filer) ReadMetric() (*metric.Metric, error) {
 	return event, nil
 }
 
+// lineCounter - вспомогательная функция для подсчета количества метрик в файле
+// так как количество строк совпадает с количеством метрик(каждая метрика на отдельной строке)
+// то достаточно посчитать строки
 func lineCounter(r io.Reader) (int, error) {
 	buf := make([]byte, 32*1024)
 	count := 0
@@ -48,7 +53,8 @@ func lineCounter(r io.Reader) (int, error) {
 	}
 }
 
-func (f *Filer) LoadFile() (Metrics, error) {
+// LoadFile - предварительная загрузка из файла
+func (f Filer) LoadFile() (Metrics, error) {
 	s := Metrics{}
 	help, err := os.Open(f.file.Name())
 
@@ -72,6 +78,7 @@ func (f *Filer) LoadFile() (Metrics, error) {
 	return s, nil
 }
 
+// Write записывает в файл содержимое хранилища, предварительно очистив файл
 func (s *Storage) Write() {
 	log := logger.Default()
 

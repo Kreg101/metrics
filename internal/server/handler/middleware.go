@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// logging логирует запрос и ответ посредством middleware
 func logging(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// При вызове logger.Default() возращается единый на весь сервер логгер
@@ -19,6 +20,8 @@ func logging(h http.HandlerFunc) http.HandlerFunc {
 			ResponseWriter: w,
 			responseData:   responseData,
 		}
+
+		// Подменяет w, на свой с логированием
 		h.ServeHTTP(&lw, r)
 
 		duration := time.Since(start).Milliseconds()
@@ -33,10 +36,13 @@ func logging(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// compression позволяет разжимать запрос и сжимать ответ, если такое возможно
 func compression(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 
+		// Если ответ запрос допускает сжатие ответа форматом gzip,
+		// мы подменим ответ на наш энкодер
 		acceptEncoding := r.Header.Get("Accept-Encoding")
 		supportsGzip := strings.Contains(acceptEncoding, "gzip")
 		if supportsGzip {
@@ -46,6 +52,7 @@ func compression(next http.HandlerFunc) http.HandlerFunc {
 			defer cw.Close()
 		}
 
+		// Если тело запроса закодировано gzip, ты мы подменим тело на наш декодер
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 		if sendsGzip {

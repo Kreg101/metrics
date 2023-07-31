@@ -5,48 +5,35 @@ import (
 	"github.com/Kreg101/metrics/internal/algorithms"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
-	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
 )
 
-type Repository interface {
-	Add(metric.Metric)
-	GetAll() storage.Metrics
-	Get(name string) (metric.Metric, bool)
-}
-
-type Mux struct {
-	storage Repository
-}
-
-func NewMux(storage Repository) *Mux {
-	mux := &Mux{}
-	mux.storage = storage
-	return mux
-}
-
+// mainPage в теле ответа запишет все существующие в хранилище метрики
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/html")
 	w.Write([]byte(algorithms.Metrics2String(mux.storage.GetAll())))
 }
 
+// metricPage проверит, что существует запрашиваемая метрика и в теле ответа запишет ее
 func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 	log := logger.Default()
 	name := chi.URLParam(r, "name")
-	if m, ok := mux.storage.Get(name); ok {
-		if m.MType == chi.URLParam(r, "type") {
-			w.Header().Set("content-type", "text/plain")
-			w.Write([]byte(algorithms.SingleMetric2String(m)))
-			return
-		}
-		log.Infof("mismatch metric type of %s in request and storage", name)
+	mType := chi.URLParam(r, "type")
+
+	// Проверяю, есть ли метрика с данным именем и типом в хранилище
+	if m, ok := mux.storage.Get(name); ok && mType == m.MType {
+		w.Header().Set("content-type", "text/plain")
+		w.Write([]byte(algorithms.SingleMetric2String(m)))
+		return
 	}
-	log.Infof("no metric %s in storage", name)
+
+	log.Infof("no metric %s and type %s in storage", name, mType)
 	w.WriteHeader(http.StatusNotFound)
 }
 
+// updateMetric проверит, что запрашиваемая метрика существует и переданные тип и значение соответствуют нормам
 func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 	log := logger.Default()
 	if chi.URLParam(r, "name") == "" {
@@ -92,10 +79,11 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// в формате json передается метрика, проверяется ее корректность и возвращается она же обновленная
 func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	log := logger.Default()
-
 	var m metric.Metric
+
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -103,11 +91,15 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверяем что метрика с таким типом и значением корректна
 	if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Errorf("empty delta or value in request")
 		return
 	}
+
+	// За счет того, что поля Delta и Value - указатели, когда мы положим их в хранилище, они обновятся
+	// значит не нужно их снова доставать и вручную менять
 	mux.storage.Add(m)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -119,12 +111,13 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// getMetric вернет метрику и StatusOk, если метрика с указанным именем и типом существует в хранилище
+// иначе вернет StatusNotFound
 func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	log := logger.Default()
-
 	var m metric.Metric
-	err := json.NewDecoder(r.Body).Decode(&m)
 
+	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("can't unmarshal json %s to %v", r.Body, m)
@@ -132,13 +125,6 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := mux.storage.Get(m.ID); ok && v.MType == m.MType {
-		//if v.MType == m.MType {
-		//	m = v
-		//} else {
-		//	w.WriteHeader(http.StatusNotFound)
-		//	log.Infof("wrong type %s of metric %s", m.MType, m.ID)
-		//	return
-		//}
 		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
@@ -154,14 +140,4 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		log.Errorf("can't marshal %v", m)
 		return
 	}
-}
-
-func (mux *Mux) Router() chi.Router {
-	router := chi.NewRouter()
-	router.Get("/", logging(compression(mux.mainPage)))
-	router.Get("/value/{type}/{name}", logging(compression(mux.metricPage)))
-	router.Post("/update/{type}/{name}/{value}", logging(compression(mux.updateMetric)))
-	router.Post("/update/", logging(compression(mux.updateMetricWithBody)))
-	router.Post("/value/", logging(compression(mux.getMetric)))
-	return router
 }

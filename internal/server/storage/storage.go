@@ -14,7 +14,7 @@ type Metrics map[string]metric.Metric
 type Storage struct {
 	metrics           Metrics
 	mutex             *sync.RWMutex
-	filer             *Filer
+	filer             Filer
 	storeInterval     time.Duration
 	syncWritingToFile bool
 }
@@ -24,6 +24,7 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 	storage.metrics = Metrics{}
 	storage.mutex = &sync.RWMutex{}
 
+	// проверяем, нужно ли нам работать с файлом
 	if !writeFile {
 		return storage, nil
 	}
@@ -33,8 +34,9 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 		return nil, err
 	}
 
-	storage.filer = &Filer{file, json.NewEncoder(file), json.NewDecoder(file)}
+	storage.filer = Filer{file, json.NewEncoder(file), json.NewDecoder(file)}
 
+	// проверяем, нужно ли нам загружать данные из файла при старте
 	if loadFromFile {
 		storage.metrics, err = storage.filer.LoadFile()
 		if err != nil {
@@ -42,6 +44,7 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 		}
 	}
 
+	// проверяем, нжуно ли синхронно писать в файл
 	if storeInterval == 0 {
 		storage.syncWritingToFile = true
 	}
