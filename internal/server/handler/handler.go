@@ -9,8 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 )
 
 type Repository interface {
@@ -27,64 +25,6 @@ func NewMux(storage Repository) *Mux {
 	mux := &Mux{}
 	mux.storage = storage
 	return mux
-}
-
-func usingLogger(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// due to the use of aka singleton pattern this log will be the same
-		// as log in main
-		log := logger.Default()
-
-		start := time.Now()
-
-		responseData := &responseData{}
-		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
-		}
-		h.ServeHTTP(&lw, r)
-
-		duration := time.Since(start).Milliseconds()
-
-		log.Infoln(
-			"uri", r.RequestURI,
-			"method", r.Method,
-			"status", responseData.status,
-			"duration", duration,
-			"size", responseData.size,
-		)
-	}
-}
-
-func usingCompression(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		ow := w
-
-		acceptEncoding := r.Header.Get("Accept-Encoding")
-		supportsGzip := strings.Contains(acceptEncoding, "gzip")
-		if supportsGzip {
-			cw := newCompressWriter(w)
-			ow = cw
-			ow.Header().Set("Content-Encoding", "gzip")
-			defer cw.Close()
-		}
-
-		contentEncoding := r.Header.Get("Content-Encoding")
-		sendsGzip := strings.Contains(contentEncoding, "gzip")
-		if sendsGzip {
-			cr, err := newCompressReader(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			r.Body = cr
-			defer cr.Close()
-		}
-
-		next.ServeHTTP(ow, r)
-	}
 }
 
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +108,6 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		log.Errorf("empty delta or value in request")
 		return
 	}
-
 	mux.storage.Add(m)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -192,21 +131,15 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if v, ok := mux.storage.Get(m.ID); ok {
-		if v.MType == m.MType {
-			switch m.MType {
-			case "counter":
-				//tmp := *v.Delta
-				m.Delta = v.Delta
-			case "gauge":
-				//tmp := *v.Value
-				m.Value = v.Value
-			}
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			log.Infof("wrong type %s of metric %s", m.MType, m.ID)
-			return
-		}
+	if v, ok := mux.storage.Get(m.ID); ok && v.MType == m.MType {
+		//if v.MType == m.MType {
+		//	m = v
+		//} else {
+		//	w.WriteHeader(http.StatusNotFound)
+		//	log.Infof("wrong type %s of metric %s", m.MType, m.ID)
+		//	return
+		//}
+		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 		log.Infof("no %s metric in storage", m.ID)
@@ -225,10 +158,10 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/", usingLogger(usingCompression(mux.mainPage)))
-	router.Get("/value/{type}/{name}", usingLogger(usingCompression(mux.metricPage)))
-	router.Post("/update/{type}/{name}/{value}", usingLogger(usingCompression(mux.updateMetric)))
-	router.Post("/update/", usingLogger(usingCompression(mux.updateMetricWithBody)))
-	router.Post("/value/", usingLogger(usingCompression(mux.getMetric)))
+	router.Get("/", logging(compression(mux.mainPage)))
+	router.Get("/value/{type}/{name}", logging(compression(mux.metricPage)))
+	router.Post("/update/{type}/{name}/{value}", logging(compression(mux.updateMetric)))
+	router.Post("/update/", logging(compression(mux.updateMetricWithBody)))
+	router.Post("/value/", logging(compression(mux.getMetric)))
 	return router
 }
