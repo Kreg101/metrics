@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Kreg101/metrics/internal/server"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
@@ -28,7 +27,6 @@ func main() {
 		}(repository, time.Duration(storeInterval)*time.Second)
 	}
 
-	fmt.Println("here")
 	s := server.NewServer(repository)
 	err = s.Start(endpoint)
 	if err != nil {

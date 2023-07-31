@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"os"
@@ -30,13 +29,11 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 		return storage, nil
 	}
 
-	//_ = os.Mkdir(path, 0755)
-
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		fmt.Println("lox")
 		return nil, err
 	}
+	defer file.Close()
 
 	storage.producer = &Producer{file, json.NewEncoder(file)}
 	storage.consumer = &Consumer{file, json.NewDecoder(file)}

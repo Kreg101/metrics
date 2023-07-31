@@ -15,18 +15,6 @@ type Producer struct {
 	encoder *json.Encoder
 }
 
-//func NewProducer(fileName string) (*Producer, error) {
-//	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return &Producer{
-//		file:    file,
-//		encoder: json.NewEncoder(file),
-//	}, nil
-//}
-
 func (p *Producer) WriteMetric(m *metric.Metric) error {
 	return p.encoder.Encode(&m)
 }
@@ -38,18 +26,6 @@ func (p *Producer) Close() error {
 type Consumer struct {
 	file    *os.File
 	decoder *json.Decoder
-}
-
-func NewConsumer(fileName string) (*Consumer, error) {
-	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Consumer{
-		file:    file,
-		decoder: json.NewDecoder(file),
-	}, nil
 }
 
 func (c *Consumer) ReadMetric() (*metric.Metric, error) {
@@ -106,17 +82,13 @@ func (c *Consumer) LoadFile() (Metrics, error) {
 	}
 
 	return s, nil
-
 }
 
 func (s *Storage) Write() {
 	log := logger.Default()
 
-	fmt.Println("here")
-
 	if err := os.Truncate(s.producer.file.Name(), 0); err != nil {
-		log.Errorf("Failed to truncate: %v", err)
-		fmt.Println("lox")
+		log.Errorf("failed to truncate: %v", err)
 		return
 	}
 
