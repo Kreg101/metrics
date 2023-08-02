@@ -6,15 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"os"
 	"sync"
 	"testing"
 )
 
+// TestNewStorage: need to clean or delete
 func TestNewStorage(t *testing.T) {
 	type params struct {
 		path          string
 		storeInterval int
-		writeFile     bool
 		loadFromFile  bool
 		log           *zap.SugaredLogger
 	}
@@ -25,18 +26,33 @@ func TestNewStorage(t *testing.T) {
 	}{
 		{
 			name:  "basic",
-			param: params{"", 0, false, false, nil},
+			param: params{"", 0, false, nil},
 			want:  &Storage{mutex: &sync.RWMutex{}, log: logger.Default()},
+		},
+		{
+			name:  "load from empty file and sync writing",
+			param: params{"tests.json", 0, true, nil},
+			want:  &Storage{mutex: &sync.RWMutex{}, log: logger.Default(), filer: Filer{}, syncWritingToFile: true},
+		},
+		{
+			name:  "load from empty file and not sync writing",
+			param: params{"tests.json", 10, true, nil},
+			want:  &Storage{mutex: &sync.RWMutex{}, log: logger.Default(), filer: Filer{}, syncWritingToFile: false},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.want.metrics = metric.Metrics{}
-			s, err := NewStorage(tc.param.path, tc.param.storeInterval, tc.param.writeFile, tc.param.loadFromFile, tc.param.log)
+			s, err := NewStorage(tc.param.path,
+				tc.param.storeInterval,
+				tc.param.loadFromFile,
+				tc.param.log)
+			s.filer = Filer{}
 			require.Nil(t, err)
 			assert.Equal(t, tc.want, s)
 		})
 	}
+	defer os.Remove("test.json")
 }
 
 func TestStorage_Add(t *testing.T) {
@@ -134,4 +150,58 @@ func TestStorage_Get(t *testing.T) {
 			assert.Equal(t, tc.value, res)
 		})
 	}
+}
+
+func TestStorage_GetAll(t *testing.T) {
+	x := int64(10)
+	y := 1.23
+	counter := metric.Metric{ID: "c", MType: "counter", Delta: &x}
+	gauge := metric.Metric{ID: "g", MType: "gauge", Value: &y}
+	tt := []struct {
+		name string
+		s    *Storage
+		want metric.Metrics
+	}{
+		{
+			name: "empty storage",
+			s:    &Storage{metrics: metric.Metrics{}, mutex: &sync.RWMutex{}},
+			want: metric.Metrics{},
+		},
+		{
+			name: "not empty storage",
+			s:    &Storage{metrics: metric.Metrics{"c": counter, "g": gauge}, mutex: &sync.RWMutex{}},
+			want: metric.Metrics{"c": counter, "g": gauge},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.s.GetAll())
+		})
+	}
+}
+
+func Test_lineCounter(t *testing.T) {
+	tt := []struct {
+		name     string
+		fileName string
+		wantErr  bool
+		want     int
+	}{
+		{
+			name:     "empty file",
+			fileName: "tests.json",
+			wantErr:  false,
+			want:     0,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			file, err := os.Open(tc.fileName)
+			require.NoError(t, err)
+			got, err := lineCounter(file)
+			require.True(t, (tc.wantErr == true && err != nil) || (tc.wantErr == false && err == nil))
+			assert.Equal(t, tc.want, got)
+		})
+	}
+	defer os.Remove("tests.json")
 }

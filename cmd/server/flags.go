@@ -12,7 +12,6 @@ var (
 	storagePath   string
 	storeInterval int
 	restore       bool
-	fileWrite     bool
 )
 
 func parseConfiguration() {
@@ -43,10 +42,5 @@ func parseConfiguration() {
 		} else {
 			restore = r
 		}
-	}
-	if storagePath == "" {
-		fileWrite = false
-	} else {
-		fileWrite = true
 	}
 }

@@ -14,7 +14,7 @@ func main() {
 	log := logger.Default()
 	defer log.Sync()
 
-	repository, err := storage.NewStorage(storagePath, storeInterval, fileWrite, restore, log)
+	repository, err := storage.NewStorage(storagePath, storeInterval, restore, log)
 	if err != nil {
 		log.Fatalf("can't initialize storage: %e", err)
 	}

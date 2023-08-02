@@ -19,7 +19,7 @@ type Storage struct {
 	syncWritingToFile bool
 }
 
-func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool, log *zap.SugaredLogger) (*Storage, error) {
+func NewStorage(path string, storeInterval int, loadFromFile bool, log *zap.SugaredLogger) (*Storage, error) {
 	storage := &Storage{}
 	storage.metrics = metric.Metrics{}
 	storage.mutex = &sync.RWMutex{}
@@ -31,7 +31,7 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool, lo
 	}
 
 	// проверяем, нужно ли нам работать с файлом
-	if !writeFile {
+	if path == "" {
 		return storage, nil
 	}
 
@@ -44,7 +44,7 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool, lo
 
 	// проверяем, нужно ли нам загружать данные из файла при старте
 	if loadFromFile {
-		storage.metrics, err = storage.filer.LoadFile()
+		storage.metrics, err = storage.filer.load()
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +68,7 @@ func (s *Storage) Add(m metric.Metric) {
 	}
 	s.metrics[m.ID] = m
 	if s.syncWritingToFile {
-		err := s.filer.WriteMetric(&m)
+		err := s.filer.writeMetric(&m)
 		if err != nil {
 			s.log.Errorf("can't add metric %v to file: %e", &m, err)
 		}
