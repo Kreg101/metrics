@@ -2,8 +2,10 @@ package storage
 
 import (
 	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"sync"
 	"testing"
 )
@@ -14,6 +16,7 @@ func TestNewStorage(t *testing.T) {
 		storeInterval int
 		writeFile     bool
 		loadFromFile  bool
+		log           *zap.SugaredLogger
 	}
 	tt := []struct {
 		name  string
@@ -22,14 +25,14 @@ func TestNewStorage(t *testing.T) {
 	}{
 		{
 			name:  "basic",
-			param: params{"", 0, false, false},
-			want:  &Storage{mutex: &sync.RWMutex{}},
+			param: params{"", 0, false, false, nil},
+			want:  &Storage{mutex: &sync.RWMutex{}, log: logger.Default()},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.want.metrics = Metrics{}
-			s, err := NewStorage(tc.param.path, tc.param.storeInterval, tc.param.writeFile, tc.param.loadFromFile)
+			tc.want.metrics = metric.Metrics{}
+			s, err := NewStorage(tc.param.path, tc.param.storeInterval, tc.param.writeFile, tc.param.loadFromFile, tc.param.log)
 			require.Nil(t, err)
 			assert.Equal(t, tc.want, s)
 		})
@@ -54,13 +57,13 @@ func TestStorage_Add(t *testing.T) {
 		{
 			name:     "add counter to empty",
 			value:    counter,
-			base:     &Storage{mutex: &sync.RWMutex{}, metrics: Metrics{}},
+			base:     &Storage{mutex: &sync.RWMutex{}, metrics: metric.Metrics{}},
 			expected: &Storage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": counter}},
 		},
 		{
 			name:     "add gauge to empty",
 			value:    gauge,
-			base:     &Storage{mutex: &sync.RWMutex{}, metrics: Metrics{}},
+			base:     &Storage{mutex: &sync.RWMutex{}, metrics: metric.Metrics{}},
 			expected: &Storage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": gauge}},
 		},
 		{
@@ -96,28 +99,28 @@ func TestStorage_Get(t *testing.T) {
 
 	tt := []struct {
 		name   string
-		source Metrics
+		source metric.Metrics
 		key    string
 		value  metric.Metric
 		ok     bool
 	}{
 		{
 			name:   "value in storage",
-			source: Metrics{"c1": counter1},
+			source: metric.Metrics{"c1": counter1},
 			key:    "c1",
 			value:  counter1,
 			ok:     true,
 		},
 		{
 			name:   "value is not in storage",
-			source: Metrics{"c1": counter1},
+			source: metric.Metrics{"c1": counter1},
 			key:    "x",
 			value:  metric.Metric{},
 			ok:     false,
 		},
 		{
 			name:   "empty storage",
-			source: Metrics{},
+			source: metric.Metrics{},
 			key:    "x",
 			value:  metric.Metric{},
 			ok:     false,

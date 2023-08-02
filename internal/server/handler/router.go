@@ -2,23 +2,32 @@ package handler
 
 import (
 	"github.com/Kreg101/metrics/internal/metric"
-	"github.com/Kreg101/metrics/internal/server/storage"
+	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 type Repository interface {
 	Add(metric.Metric)
-	GetAll() storage.Metrics
+	GetAll() metric.Metrics
 	Get(name string) (metric.Metric, bool)
 }
 
 type Mux struct {
 	storage Repository
+	log     *zap.SugaredLogger
 }
 
-func NewMux(storage Repository) *Mux {
+func NewMux(storage Repository, log *zap.SugaredLogger) *Mux {
 	mux := &Mux{}
 	mux.storage = storage
+
+	if log == nil {
+		mux.log = logger.Default()
+	} else {
+		mux.log = log
+	}
+
 	return mux
 }
 

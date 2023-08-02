@@ -2,9 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/Kreg101/metrics/internal/algorithms"
 	"github.com/Kreg101/metrics/internal/metric"
-	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -13,32 +11,30 @@ import (
 // mainPage в теле ответа запишет все существующие в хранилище метрики
 func (mux *Mux) mainPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/html")
-	w.Write([]byte(algorithms.Metrics2String(mux.storage.GetAll())))
+	w.Write([]byte(mux.storage.GetAll().String()))
 }
 
 // metricPage проверит, что существует запрашиваемая метрика и в теле ответа запишет ее
 func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
-	log := logger.Default()
 	name := chi.URLParam(r, "name")
 	mType := chi.URLParam(r, "type")
 
 	// Проверяю, есть ли метрика с данным именем и типом в хранилище
 	if m, ok := mux.storage.Get(name); ok && mType == m.MType {
 		w.Header().Set("content-type", "text/plain")
-		w.Write([]byte(algorithms.SingleMetric2String(m)))
+		w.Write([]byte(m.String()))
 		return
 	}
 
-	log.Infof("no metric %s and type %s in storage", name, mType)
+	mux.log.Infof("no metric %s and type %s in storage", name, mType)
 	w.WriteHeader(http.StatusNotFound)
 }
 
 // updateMetric проверит, что запрашиваемая метрика существует и переданные тип и значение соответствуют нормам
 func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
-	log := logger.Default()
 	if chi.URLParam(r, "name") == "" {
 		w.WriteHeader(http.StatusNotFound)
-		log.Errorf("empty metric name")
+		mux.log.Errorf("empty metric name")
 		return
 	}
 
@@ -47,7 +43,7 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 		res, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			log.Errorf("can't parse %s in float", chi.URLParam(r, "value"))
+			mux.log.Errorf("can't parse %s in float", chi.URLParam(r, "value"))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -62,7 +58,7 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 		res, err := strconv.ParseInt(chi.URLParam(r, "value"), 10, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			log.Errorf("can't parse %s in double", chi.URLParam(r, "value"))
+			mux.log.Errorf("can't parse %s in double", chi.URLParam(r, "value"))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -75,26 +71,25 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		w.WriteHeader(http.StatusBadRequest)
-		log.Infof("wrong metric type: %s", chi.URLParam(r, "type"))
+		mux.log.Infof("wrong metric type: %s", chi.URLParam(r, "type"))
 	}
 }
 
 // в формате json передается метрика, проверяется ее корректность и возвращается она же обновленная
 func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
-	log := logger.Default()
 	var m metric.Metric
 
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		log.Errorf("can't unmarshal json %s to %v", r.Body, m)
+		mux.log.Errorf("can't unmarshal json %s to %v", r.Body, m)
 		return
 	}
 
 	// Проверяем что метрика с таким типом и значением корректна
 	if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 		w.WriteHeader(http.StatusBadRequest)
-		log.Errorf("empty delta or value in request")
+		mux.log.Errorf("empty delta or value in request")
 		return
 	}
 
@@ -106,7 +101,7 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w).Encode(m)
 	if e != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Errorf("can't marshal %v", m)
+		mux.log.Errorf("can't marshal %v", m)
 		return
 	}
 }
@@ -114,13 +109,12 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 // getMetric вернет метрику и StatusOk, если метрика с указанным именем и типом существует в хранилище
 // иначе вернет StatusNotFound
 func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
-	log := logger.Default()
 	var m metric.Metric
 
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Errorf("can't unmarshal json %s to %v", r.Body, m)
+		mux.log.Errorf("can't unmarshal json %s to %v", r.Body, m)
 		return
 	}
 
@@ -128,7 +122,7 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		log.Infof("no %s metric in storage", m.ID)
+		mux.log.Infof("no %s metric in storage", m.ID)
 		return
 	}
 
@@ -137,7 +131,7 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(m)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Errorf("can't marshal %v", m)
+		mux.log.Errorf("can't marshal %v", m)
 		return
 	}
 }

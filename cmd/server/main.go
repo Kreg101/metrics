@@ -14,7 +14,7 @@ func main() {
 	log := logger.Default()
 	defer log.Sync()
 
-	repository, err := storage.NewStorage(storagePath, storeInterval, fileWrite, restore)
+	repository, err := storage.NewStorage(storagePath, storeInterval, fileWrite, restore, log)
 	if err != nil {
 		log.Fatalf("can't initialize storage: %e", err)
 	}
@@ -29,10 +29,10 @@ func main() {
 		}(repository, time.Duration(storeInterval)*time.Second)
 	}
 
-	s := server.NewServer(repository)
+	s := server.NewServer(repository, log)
 	err = s.Start(endpoint)
 	if err != nil {
-		log.Fatalf("can't start server: %e", err)
+		panic(err)
 	}
 
 }

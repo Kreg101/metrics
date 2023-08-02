@@ -4,25 +4,31 @@ import (
 	"encoding/json"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
+	"go.uber.org/zap"
 	"os"
 	"sync"
 	"time"
 )
 
-type Metrics map[string]metric.Metric
-
 type Storage struct {
-	metrics           Metrics
+	metrics           metric.Metrics
 	mutex             *sync.RWMutex
+	log               *zap.SugaredLogger
 	filer             Filer
 	storeInterval     time.Duration
 	syncWritingToFile bool
 }
 
-func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*Storage, error) {
+func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool, log *zap.SugaredLogger) (*Storage, error) {
 	storage := &Storage{}
-	storage.metrics = Metrics{}
+	storage.metrics = metric.Metrics{}
 	storage.mutex = &sync.RWMutex{}
+
+	if log == nil {
+		storage.log = logger.Default()
+	} else {
+		storage.log = log
+	}
 
 	// проверяем, нужно ли нам работать с файлом
 	if !writeFile {
@@ -53,7 +59,6 @@ func NewStorage(path string, storeInterval int, writeFile, loadFromFile bool) (*
 }
 
 func (s *Storage) Add(m metric.Metric) {
-	log := logger.Default()
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if m.MType == "counter" {
@@ -65,14 +70,14 @@ func (s *Storage) Add(m metric.Metric) {
 	if s.syncWritingToFile {
 		err := s.filer.WriteMetric(&m)
 		if err != nil {
-			log.Errorf("can't add metric %v to file: %e", &m, err)
+			s.log.Errorf("can't add metric %v to file: %e", &m, err)
 		}
 	}
 }
 
-func (s *Storage) GetAll() Metrics {
+func (s *Storage) GetAll() metric.Metrics {
 	s.mutex.RLock()
-	duplicate := make(Metrics, len(s.metrics))
+	duplicate := make(metric.Metrics, len(s.metrics))
 	for k, v := range s.metrics {
 		duplicate[k] = v
 	}

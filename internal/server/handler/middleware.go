@@ -24,13 +24,13 @@ func logging(h http.HandlerFunc) http.HandlerFunc {
 		// Подменяет w, на свой с логированием
 		h.ServeHTTP(&lw, r)
 
-		duration := time.Since(start).Milliseconds()
+		duration := time.Since(start)
 
 		log.Infoln(
 			"uri", r.RequestURI,
 			"method", r.Method,
 			"status", responseData.status,
-			"duration", duration,
+			"duration", duration.String(),
 			"size", responseData.size,
 		)
 	}

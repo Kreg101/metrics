@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
-	"github.com/Kreg101/metrics/internal/server/logger"
 	"io"
 	"os"
 )
@@ -54,8 +53,8 @@ func lineCounter(r io.Reader) (int, error) {
 }
 
 // LoadFile - предварительная загрузка из файла
-func (f Filer) LoadFile() (Metrics, error) {
-	s := Metrics{}
+func (f Filer) LoadFile() (metric.Metrics, error) {
+	s := metric.Metrics{}
 	help, err := os.Open(f.file.Name())
 
 	if err != nil {
@@ -80,12 +79,11 @@ func (f Filer) LoadFile() (Metrics, error) {
 
 // Write записывает в файл содержимое хранилища, предварительно очистив файл
 func (s *Storage) Write() {
-	log := logger.Default()
 
 	fmt.Println("here")
 
 	if err := os.Truncate(s.filer.file.Name(), 0); err != nil {
-		log.Errorf("failed to truncate: %v", err)
+		s.log.Errorf("failed to truncate: %v", err)
 		return
 	}
 
@@ -93,7 +91,7 @@ func (s *Storage) Write() {
 		fmt.Println(m)
 		err := s.filer.WriteMetric(&m)
 		if err != nil {
-			log.Errorf("can't add metric %v to file: %s", m, err)
+			s.log.Errorf("can't add metric %v to file: %s", m, err)
 		}
 	}
 }
