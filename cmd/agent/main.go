@@ -2,12 +2,20 @@ package main
 
 import (
 	"github.com/Kreg101/metrics/internal/agent"
+	"time"
 )
 
 func main() {
 
 	parseFlags()
-	a := agent.NewAgent(flagPollInterval, flagReportInterval, "http://"+flagEndpoint)
-	a.Start()
+
+	for i := 0; i < 100; i++ {
+		go func() {
+			a := agent.NewAgent(flagPollInterval, flagReportInterval, "http://"+flagEndpoint)
+			a.Start()
+		}()
+	}
+
+	time.Sleep(1000 * time.Second)
 
 }

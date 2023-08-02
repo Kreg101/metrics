@@ -1,6 +1,11 @@
 package handler
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,210 +18,230 @@ import (
 func TestNewMux(t *testing.T) {
 	tt := []struct {
 		name     string
+		param    Repository
 		expected *Mux
 	}{
 		{
-			name:     "default constructor",
-			expected: &Mux{storage: storage.NewStorage()},
+			name:     "nil storage",
+			param:    nil,
+			expected: &Mux{storage: nil, log: logger.Default()},
+		},
+		{
+			name:     "default storage",
+			param:    &storage.Storage{},
+			expected: &Mux{storage: &storage.Storage{}, log: logger.Default()},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mux := NewMux(storage.NewStorage())
+			mux := NewMux(tc.param, nil)
 			assert.Equal(t, tc.expected, mux)
 		})
 	}
 }
 
-// I can't test this function with multiple values
-// because the order of elements in map is variable
-func Test_metricsToString(t *testing.T) {
-	tt := []struct {
-		name   string
-		source storage.Metrics
-		want   string
-	}{
-		{
-			name:   "single counter metric",
-			source: storage.Metrics{"x": storage.Counter(1)},
-			want:   "x:1",
-		},
-		{
-			name:   "single gauge metric",
-			source: storage.Metrics{"x": storage.Gauge(1.340)},
-			want:   "x:1.34",
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, metricsToString(tc.source))
-		})
-	}
-}
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, body *metric.Metric) (*http.Response, string) {
+	var req *http.Request
+	var err error
+	if body == nil {
+		req, err = http.NewRequest(method, ts.URL+path, nil)
+		require.NoError(t, err)
+	} else {
 
-func Test_singleMetricToString(t *testing.T) {
-	tt := []struct {
-		name   string
-		source interface{}
-		want   string
-	}{
-		{
-			name:   "counter metric",
-			source: storage.Counter(1),
-			want:   "1",
-		},
-		{
-			name:   "gauge metric",
-			source: storage.Gauge(1.34),
-			want:   "1.34",
-		},
-		{
-			name:   "invalid type metric",
-			source: 2,
-			want:   "",
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, singleMetricToString(tc.source))
-		})
-	}
-}
+		js, err := json.Marshal(*body)
+		require.NoError(t, err)
 
-func Test_float2String(t *testing.T) {
-	tt := []struct {
-		name string
-		args float64
-		want string
-	}{
-		{
-			name: "no trim",
-			args: 1.235,
-			want: "1.235",
-		},
-		{
-			name: "trim 1 digit",
-			args: 1.230,
-			want: "1.23",
-		},
-		{
-			name: "trim 2 digits",
-			args: 1.200,
-			want: "1.2",
-		},
-		{
-			name: "integer",
-			args: 1.00000,
-			want: "1",
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, float2String(tc.args))
-		})
-	}
-}
+		var b bytes.Buffer
+		w := gzip.NewWriter(&b)
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
-	require.NoError(t, err)
+		_, err = w.Write(js)
+		require.NoError(t, err)
+
+		err = w.Close()
+		require.NoError(t, err)
+
+		req, err = http.NewRequest(method, ts.URL+path, &b)
+		req.Header.Set("Accept-Encoding", "gzip")
+		req.Header.Set("Content-Encoding", "gzip")
+		require.NoError(t, err)
+	}
 
 	resp, err := ts.Client().Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
+	var respBody string
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		gz, err := gzip.NewReader(resp.Body)
+		require.NoError(t, err)
+		defer gz.Close()
 
-	return resp, string(respBody)
+		var b bytes.Buffer
+		_, err = b.ReadFrom(gz)
+		require.NoError(t, err)
+
+		respBody = b.String()
+	} else {
+		x, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		respBody = string(x)
+	}
+	return resp, respBody
 }
 
 func TestMux_Router(t *testing.T) {
-	mux := NewMux(storage.NewStorage())
+	counter := int64(10)
+	gauge := 1.2345
+	s, err := storage.NewStorage("", 0, false, nil)
+	require.NoError(t, err)
+
+	mux := NewMux(s, nil)
 	ts := httptest.NewServer(mux.Router())
 	defer ts.Close()
 	type response struct {
-		statusCode int
-		body       string
+		statusCode  int
+		contentType string
+		body        string
 	}
 	tt := []struct {
 		name   string
 		url    string
 		method string
+		body   *metric.Metric
 		want   response
 	}{
 		{
 			name:   "main page",
 			url:    "/",
 			method: http.MethodGet,
-			want:   response{http.StatusOK, ""},
+			body:   nil,
+			want:   response{http.StatusOK, "text/html", ""},
 		},
 		{
 			name:   "correct update counter request",
 			url:    "/update/counter/x/10",
 			method: http.MethodPost,
-			want:   response{http.StatusOK, ""},
+			body:   nil,
+			want:   response{http.StatusOK, "", ""},
 		},
 		{
 			name:   "correct update gauge request",
 			url:    "/update/gauge/y/1.23",
 			method: http.MethodPost,
-			want:   response{http.StatusOK, ""},
+			body:   nil,
+			want:   response{http.StatusOK, "", ""},
 		},
 		{
 			name:   "no metric name in update request #1",
 			url:    "/update/counter//10",
 			method: http.MethodPost,
-			want:   response{http.StatusNotFound, ""},
+			body:   nil,
+			want:   response{http.StatusNotFound, "", ""},
 		},
 		{
 			name:   "no metric name in update request #2",
 			url:    "/update/counter",
 			method: http.MethodPost,
-			want:   response{http.StatusNotFound, "404 page not found\n"},
+			body:   nil,
+			want:   response{http.StatusNotFound, "text/plain; charset=utf-8", "404 page not found\n"},
 		},
 		{
 			name:   "invalid counter type value",
 			url:    "/update/counter/x/abc",
 			method: http.MethodPost,
-			want:   response{http.StatusBadRequest, ""},
+			body:   nil,
+			want:   response{http.StatusBadRequest, "", ""},
 		},
 		{
 			name:   "invalid gauge type value",
 			url:    "/update/counter/x/abc",
 			method: http.MethodPost,
-			want:   response{http.StatusBadRequest, ""},
+			body:   nil,
+			want:   response{http.StatusBadRequest, "", ""},
 		},
 		{
 			name:   "invalid metric type",
 			url:    "/update/counte/x/abc",
 			method: http.MethodPost,
-			want:   response{http.StatusBadRequest, ""},
+			body:   nil,
+			want:   response{http.StatusBadRequest, "", ""},
 		},
 		{
 			name:   "single metric request",
 			url:    "/value/counter/x",
 			method: http.MethodGet,
-			want:   response{statusCode: http.StatusOK, body: "10"},
+			body:   nil,
+			want:   response{http.StatusOK, "text/plain", "10"},
 		},
 		{
 			name:   "invalid metric type request",
 			url:    "/value/cor/x",
 			method: http.MethodGet,
-			want:   response{statusCode: http.StatusNotFound, body: ""},
+			body:   nil,
+			want:   response{http.StatusNotFound, "", ""},
 		},
 		{
 			name:   "no metric in storage",
 			url:    "/value/counter/z",
 			method: http.MethodGet,
-			want:   response{statusCode: http.StatusNotFound, body: ""},
+			body:   nil,
+			want:   response{http.StatusNotFound, "", ""},
+		},
+		{
+			name:   "update counter metric with body",
+			url:    "/update/",
+			method: http.MethodPost,
+			body:   &metric.Metric{ID: "key", MType: "counter", Delta: &counter},
+			want: response{http.StatusOK, "application/json",
+				"{\"id\":\"key\",\"type\":\"counter\",\"delta\":10}\n"},
+		},
+		{
+			name:   "update gauge metric with body",
+			url:    "/update/",
+			method: http.MethodPost,
+			body:   &metric.Metric{ID: "key", MType: "gauge", Value: &gauge},
+			want: response{http.StatusOK, "application/json",
+				"{\"id\":\"key\",\"type\":\"gauge\",\"value\":1.2345}\n"},
+		},
+		{
+			name:   "invalid gauge metric with body",
+			url:    "/update/",
+			method: http.MethodPost,
+			body:   &metric.Metric{ID: "key", MType: "counter", Value: &gauge},
+			want: response{http.StatusBadRequest, "",
+				""},
+		},
+		{
+			name:   "invalid counter metric with body",
+			url:    "/update/",
+			method: http.MethodPost,
+			body:   &metric.Metric{ID: "key", MType: "gauge", Delta: &counter},
+			want: response{http.StatusBadRequest, "",
+				""},
+		},
+		{
+			name:   "correct value request",
+			url:    "/value/",
+			method: http.MethodPost,
+			body:   &metric.Metric{ID: "key", MType: "gauge"},
+			want: response{http.StatusOK, "application/json",
+				"{\"id\":\"key\",\"type\":\"gauge\",\"value\":1.2345}\n"},
+		},
+		{
+			name:   "no metric in storage",
+			url:    "/value/",
+			method: http.MethodPost,
+			body:   &metric.Metric{ID: "ke", MType: "gauge"},
+			want: response{http.StatusNotFound, "",
+				""},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			resp, get := testRequest(t, ts, tc.method, tc.url)
+			resp, get := testRequest(t, ts, tc.method, tc.url, tc.body)
 			defer resp.Body.Close()
 			assert.Equal(t, tc.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tc.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tc.want.body, get)
 		})
 	}

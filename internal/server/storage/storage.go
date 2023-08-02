@@ -1,44 +1,83 @@
 package storage
 
-import "sync"
-
-type Gauge float64
-type Counter int64
-
-type Metrics map[string]interface{}
+import (
+	"encoding/json"
+	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/server/logger"
+	"go.uber.org/zap"
+	"os"
+	"sync"
+	"time"
+)
 
 type Storage struct {
-	metrics Metrics
-	mutex   *sync.RWMutex
+	metrics           metric.Metrics
+	mutex             *sync.RWMutex
+	log               *zap.SugaredLogger
+	filer             Filer
+	storeInterval     time.Duration
+	syncWritingToFile bool
 }
 
-// NewStorage return pointer to Storage with initialized metrics field
-func NewStorage() *Storage {
+func NewStorage(path string, storeInterval int, loadFromFile bool, log *zap.SugaredLogger) (*Storage, error) {
 	storage := &Storage{}
-	storage.metrics = Metrics{}
+	storage.metrics = metric.Metrics{}
 	storage.mutex = &sync.RWMutex{}
-	return storage
+
+	if log == nil {
+		storage.log = logger.Default()
+	} else {
+		storage.log = log
+	}
+
+	// проверяем, нужно ли нам работать с файлом
+	if path == "" {
+		return storage, nil
+	}
+
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	storage.filer = Filer{file, json.NewEncoder(file), json.NewDecoder(file)}
+
+	// проверяем, нужно ли нам загружать данные из файла при старте
+	if loadFromFile {
+		storage.metrics, err = storage.filer.load()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// проверяем, нжуно ли синхронно писать в файл
+	if storeInterval == 0 {
+		storage.syncWritingToFile = true
+	}
+
+	return storage, nil
 }
 
-func (s *Storage) Add(key string, value interface{}) {
+func (s *Storage) Add(m metric.Metric) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	switch v := value.(type) {
-	case Gauge:
-		s.metrics[key] = v
-	case Counter:
-		// if value of counter type is already in metrics - update it
-		if val, ok := s.metrics[key]; ok {
-			s.metrics[key] = val.(Counter) + v
-		} else {
-			s.metrics[key] = v
+	if m.MType == "counter" {
+		if v, ok := s.metrics[m.ID]; ok {
+			*m.Delta += *v.Delta
+		}
+	}
+	s.metrics[m.ID] = m
+	if s.syncWritingToFile {
+		err := s.filer.writeMetric(&m)
+		if err != nil {
+			s.log.Errorf("can't add metric %v to file: %e", &m, err)
 		}
 	}
 }
 
-func (s *Storage) GetAll() Metrics {
+func (s *Storage) GetAll() metric.Metrics {
 	s.mutex.RLock()
-	duplicate := make(Metrics, len(s.metrics))
+	duplicate := make(metric.Metrics, len(s.metrics))
 	for k, v := range s.metrics {
 		duplicate[k] = v
 	}
@@ -47,25 +86,11 @@ func (s *Storage) GetAll() Metrics {
 }
 
 // Get return an element, true if it exists in map or nil, false if it's not
-func (s *Storage) Get(name string) (interface{}, bool) {
+func (s *Storage) Get(name string) (metric.Metric, bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if v, ok := s.metrics[name]; ok {
 		return v, ok
 	}
-	return nil, false
-}
-
-// CheckType returns string, because it's easier to compare result with pattern
-// in handler's functions
-func (s *Storage) CheckType(name string) string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	switch s.metrics[name].(type) {
-	case Gauge:
-		return "gauge"
-	case Counter:
-		return "counter"
-	}
-	return ""
+	return metric.Metric{}, false
 }
