@@ -73,14 +73,14 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body *m
 	var respBody string
 	if resp.Header.Get("Content-Encoding") == "gzip" {
 		gz, err := gzip.NewReader(resp.Body)
-		defer gz.Close()
 		require.NoError(t, err)
+		defer gz.Close()
 
 		var b bytes.Buffer
 		_, err = b.ReadFrom(gz)
 		require.NoError(t, err)
 
-		respBody = string(b.Bytes())
+		respBody = b.String()
 	} else {
 		x, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
