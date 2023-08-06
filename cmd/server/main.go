@@ -29,7 +29,7 @@ func main() {
 		}(repository, time.Duration(storeInterval)*time.Second)
 	}
 
-	s := server.NewServer(repository, log)
+	s := server.NewServer(repository, log, databaseDSN)
 	err = s.Start(endpoint)
 	if err != nil {
 		panic(err)

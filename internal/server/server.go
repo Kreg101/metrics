@@ -11,9 +11,9 @@ type Server struct {
 	host string
 }
 
-func NewServer(repository handler.Repository, log *zap.SugaredLogger) *Server {
+func NewServer(repository handler.Repository, log *zap.SugaredLogger, initDB string) *Server {
 	serv := &Server{nil, ""}
-	serv.mux = handler.NewMux(repository, log)
+	serv.mux = handler.NewMux(repository, log, initDB)
 	return serv
 }
 

@@ -135,3 +135,14 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
+	err := mux.dbClient.Ping()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		mux.log.Errorf("can't connect to server: %s", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
