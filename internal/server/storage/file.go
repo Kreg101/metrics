@@ -3,7 +3,6 @@ package storage
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"io"
 	"os"
@@ -85,7 +84,6 @@ func (s *Storage) Write() {
 	}
 
 	for _, m := range s.GetAll() {
-		fmt.Println(m)
 		err := s.filer.writeMetric(&m)
 		if err != nil {
 			s.log.Errorf("can't add metric %v to file: %s", m, err)

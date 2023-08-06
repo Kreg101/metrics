@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -140,6 +141,7 @@ func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
 	err := mux.dbClient.Ping()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("here", err)
 		mux.log.Errorf("can't connect to server: %s", err)
 		return
 	}

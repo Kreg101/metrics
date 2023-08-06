@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"database/sql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"time"
 )
 
@@ -10,20 +11,8 @@ type Client struct {
 	db *sql.DB
 }
 
-func NewClient(init string) Client {
-	var err error
-	c := Client{}
-	if init == "" {
-		return c
-	}
-
-	c.db, err = sql.Open("pgx", init)
-	if err != nil {
-		panic(err)
-	}
-	defer c.db.Close()
-
-	return c
+func NewClient(db *sql.DB) Client {
+	return Client{db: db}
 }
 
 func (c Client) Ping() error {

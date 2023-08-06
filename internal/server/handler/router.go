@@ -20,7 +20,7 @@ type Mux struct {
 	dbClient client.Client
 }
 
-func NewMux(storage Repository, log *zap.SugaredLogger, dbInit string) *Mux {
+func NewMux(storage Repository, log *zap.SugaredLogger, db client.Client) *Mux {
 	mux := &Mux{}
 	mux.storage = storage
 
@@ -30,7 +30,7 @@ func NewMux(storage Repository, log *zap.SugaredLogger, dbInit string) *Mux {
 		mux.log = log
 	}
 
-	mux.dbClient = client.NewClient(dbInit)
+	mux.dbClient = db
 
 	return mux
 }
