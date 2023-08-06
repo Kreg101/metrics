@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/server/db/client"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -24,17 +25,17 @@ func TestNewMux(t *testing.T) {
 		{
 			name:     "nil storage",
 			param:    nil,
-			expected: &Mux{storage: nil, log: logger.Default()},
+			expected: &Mux{storage: nil, log: logger.Default(), dbClient: client.Client{}},
 		},
 		{
 			name:     "default storage",
 			param:    &storage.Storage{},
-			expected: &Mux{storage: &storage.Storage{}, log: logger.Default()},
+			expected: &Mux{storage: &storage.Storage{}, log: logger.Default(), dbClient: client.Client{}},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mux := NewMux(tc.param, nil)
+			mux := NewMux(tc.param, nil, "")
 			assert.Equal(t, tc.expected, mux)
 		})
 	}
@@ -95,7 +96,7 @@ func TestMux_Router(t *testing.T) {
 	s, err := storage.NewStorage("", 0, false, nil)
 	require.NoError(t, err)
 
-	mux := NewMux(s, nil)
+	mux := NewMux(s, nil, "")
 	ts := httptest.NewServer(mux.Router())
 	defer ts.Close()
 	type response struct {
