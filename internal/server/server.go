@@ -12,7 +12,7 @@ type Server struct {
 	host string
 }
 
-func NewServer(repository handler.Repository, log *zap.SugaredLogger, db client.Client) *Server {
+func NewServer(repository handler.Repository, log *zap.SugaredLogger, db client.DBClient) *Server {
 	serv := &Server{nil, ""}
 	serv.mux = handler.NewMux(repository, log, db)
 	return serv

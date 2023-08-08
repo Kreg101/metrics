@@ -25,17 +25,17 @@ func TestNewMux(t *testing.T) {
 		{
 			name:     "nil storage",
 			param:    nil,
-			expected: &Mux{storage: nil, log: logger.Default(), dbClient: client.Client{}},
+			expected: &Mux{storage: nil, log: logger.Default(), dbClient: client.DBClient{}},
 		},
 		{
 			name:     "default storage",
 			param:    &storage.Storage{},
-			expected: &Mux{storage: &storage.Storage{}, log: logger.Default(), dbClient: client.Client{}},
+			expected: &Mux{storage: &storage.Storage{}, log: logger.Default(), dbClient: client.DBClient{}},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mux := NewMux(tc.param, nil, client.Client{})
+			mux := NewMux(tc.param, nil, client.DBClient{})
 			assert.Equal(t, tc.expected, mux)
 		})
 	}
@@ -96,7 +96,7 @@ func TestMux_Router(t *testing.T) {
 	s, err := storage.NewStorage("", 0, false, nil)
 	require.NoError(t, err)
 
-	mux := NewMux(s, nil, client.Client{})
+	mux := NewMux(s, nil, client.DBClient{})
 	ts := httptest.NewServer(mux.Router())
 	defer ts.Close()
 	type response struct {

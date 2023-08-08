@@ -17,10 +17,10 @@ type Repository interface {
 type Mux struct {
 	storage  Repository
 	log      *zap.SugaredLogger
-	dbClient client.Client
+	dbClient client.DBClient
 }
 
-func NewMux(storage Repository, log *zap.SugaredLogger, db client.Client) *Mux {
+func NewMux(storage Repository, log *zap.SugaredLogger, db client.DBClient) *Mux {
 	mux := &Mux{}
 	mux.storage = storage
 
