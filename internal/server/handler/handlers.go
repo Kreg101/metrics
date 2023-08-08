@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -27,7 +26,7 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mux.log.Infof("no metric %s and type %s in storage", name, mType)
+	mux.log.Infof("no metric %s and type %s in inMemStore", name, mType)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -123,7 +122,7 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		mux.log.Infof("no %s metric in storage", m.ID)
+		mux.log.Infof("no %s metric in inMemStore", m.ID)
 		return
 	}
 
@@ -138,10 +137,9 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
-	err := mux.dbClient.Ping()
+	err := mux.storage.Ping()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Println("here", err)
 		mux.log.Errorf("can't connect to server: %s", err)
 		return
 	}

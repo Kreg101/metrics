@@ -1,4 +1,4 @@
-package storage
+package inMemStore
 
 import (
 	"encoding/json"
@@ -10,7 +10,9 @@ import (
 	"time"
 )
 
-type Storage struct {
+// Storage имплементирует интерфейс Repository, поэтому может быть использован
+// как хранилище метрик
+type InMemStorage struct {
 	metrics           metric.Metrics
 	mutex             *sync.RWMutex
 	log               *zap.SugaredLogger
@@ -19,11 +21,13 @@ type Storage struct {
 	syncWritingToFile bool
 }
 
-func NewStorage(path string, storeInterval int, loadFromFile bool, log *zap.SugaredLogger) (*Storage, error) {
-	storage := &Storage{}
+// NewInMemStorage returns initialized inMemStore pointer
+func NewInMemStorage(path string, storeInterval int, loadFromFile bool, log *zap.SugaredLogger) (*InMemStorage, error) {
+	storage := &InMemStorage{}
 	storage.metrics = metric.Metrics{}
 	storage.mutex = &sync.RWMutex{}
 
+	// инициализируем логер, если он не передан, то используем дефолтный
 	if log == nil {
 		storage.log = logger.Default()
 	} else {
@@ -50,15 +54,22 @@ func NewStorage(path string, storeInterval int, loadFromFile bool, log *zap.Suga
 		}
 	}
 
-	// проверяем, нжуно ли синхронно писать в файл
+	// проверяем, нужно ли синхронно писать в файл или делать это с заданной периодичностью
 	if storeInterval == 0 {
 		storage.syncWritingToFile = true
+	} else {
+		go func(s *InMemStorage, d time.Duration) {
+			for range time.Tick(d) {
+				s.Write()
+			}
+		}(storage, time.Duration(storeInterval)*time.Second)
 	}
 
 	return storage, nil
 }
 
-func (s *Storage) Add(m metric.Metric) {
+// Add (add metric to inMemStore)
+func (s *InMemStorage) Add(m metric.Metric) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if m.MType == "counter" {
@@ -75,7 +86,8 @@ func (s *Storage) Add(m metric.Metric) {
 	}
 }
 
-func (s *Storage) GetAll() metric.Metrics {
+// GetAll returns all metrics from inMemStore
+func (s *InMemStorage) GetAll() metric.Metrics {
 	s.mutex.RLock()
 	duplicate := make(metric.Metrics, len(s.metrics))
 	for k, v := range s.metrics {
@@ -86,11 +98,18 @@ func (s *Storage) GetAll() metric.Metrics {
 }
 
 // Get return an element, true if it exists in map or nil, false if it's not
-func (s *Storage) Get(name string) (metric.Metric, bool) {
+func (s *InMemStorage) Get(name string) (metric.Metric, bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if v, ok := s.metrics[name]; ok {
 		return v, ok
 	}
 	return metric.Metric{}, false
+}
+
+// Ping for in-memory inMemStore is default true
+// because it doesn't need a connection. I use this function
+// for common interface
+func (s *InMemStorage) Ping() error {
+	return nil
 }

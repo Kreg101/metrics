@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/Kreg101/metrics/internal/metric"
-	"github.com/Kreg101/metrics/internal/server/db/client"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -12,15 +11,15 @@ type Repository interface {
 	Add(metric.Metric)
 	GetAll() metric.Metrics
 	Get(name string) (metric.Metric, bool)
+	Ping() error
 }
 
 type Mux struct {
-	storage  Repository
-	log      *zap.SugaredLogger
-	dbClient client.DBClient
+	storage Repository
+	log     *zap.SugaredLogger
 }
 
-func NewMux(storage Repository, log *zap.SugaredLogger, db client.DBClient) *Mux {
+func NewMux(storage Repository, log *zap.SugaredLogger) *Mux {
 	mux := &Mux{}
 	mux.storage = storage
 
@@ -29,8 +28,6 @@ func NewMux(storage Repository, log *zap.SugaredLogger, db client.DBClient) *Mux
 	} else {
 		mux.log = log
 	}
-
-	mux.dbClient = db
 
 	return mux
 }
