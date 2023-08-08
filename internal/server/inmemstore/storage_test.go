@@ -1,4 +1,4 @@
-package inMemStore
+package inmemstore
 
 import (
 	"github.com/Kreg101/metrics/internal/metric"
@@ -121,21 +121,21 @@ func TestInMemStorage_Get(t *testing.T) {
 		ok     bool
 	}{
 		{
-			name:   "value in inMemStore",
+			name:   "value in inmemstore",
 			source: metric.Metrics{"c1": counter1},
 			key:    "c1",
 			value:  counter1,
 			ok:     true,
 		},
 		{
-			name:   "value is not in inMemStore",
+			name:   "value is not in inmemstore",
 			source: metric.Metrics{"c1": counter1},
 			key:    "x",
 			value:  metric.Metric{},
 			ok:     false,
 		},
 		{
-			name:   "empty inMemStore",
+			name:   "empty inmemstore",
 			source: metric.Metrics{},
 			key:    "x",
 			value:  metric.Metric{},
@@ -163,12 +163,12 @@ func TestInMemStorage_GetAll(t *testing.T) {
 		want metric.Metrics
 	}{
 		{
-			name: "empty inMemStore",
+			name: "empty inmemstore",
 			s:    &InMemStorage{metrics: metric.Metrics{}, mutex: &sync.RWMutex{}},
 			want: metric.Metrics{},
 		},
 		{
-			name: "not empty inMemStore",
+			name: "not empty inmemstore",
 			s:    &InMemStorage{metrics: metric.Metrics{"c": counter, "g": gauge}, mutex: &sync.RWMutex{}},
 			want: metric.Metrics{"c": counter, "g": gauge},
 		},

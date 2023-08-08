@@ -1,9 +1,8 @@
-package inMemStore
+package inmemstore
 
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"io"
 	"os"
@@ -86,8 +85,6 @@ func (s *InMemStorage) Write() {
 		s.log.Errorf("failed to truncate: %v", err)
 		return
 	}
-
-	fmt.Println("here")
 
 	for _, m := range s.GetAll() {
 		err := s.filer.writeMetric(&m)

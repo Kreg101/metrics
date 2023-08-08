@@ -1,7 +1,8 @@
-package inMemStore
+package inmemstore
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"go.uber.org/zap"
@@ -10,7 +11,7 @@ import (
 	"time"
 )
 
-// Storage имплементирует интерфейс Repository, поэтому может быть использован
+// InMemStorage имплементирует интерфейс Repository, поэтому может быть использован
 // как хранилище метрик
 type InMemStorage struct {
 	metrics           metric.Metrics
@@ -21,7 +22,7 @@ type InMemStorage struct {
 	syncWritingToFile bool
 }
 
-// NewInMemStorage returns initialized inMemStore pointer
+// NewInMemStorage returns initialized inmemstore pointer
 func NewInMemStorage(path string, storeInterval int, loadFromFile bool, log *zap.SugaredLogger) (*InMemStorage, error) {
 	storage := &InMemStorage{}
 	storage.metrics = metric.Metrics{}
@@ -65,10 +66,12 @@ func NewInMemStorage(path string, storeInterval int, loadFromFile bool, log *zap
 		}(storage, time.Duration(storeInterval)*time.Second)
 	}
 
+	fmt.Println("here")
+
 	return storage, nil
 }
 
-// Add (add metric to inMemStore)
+// Add (add metric to inmemstore)
 func (s *InMemStorage) Add(m metric.Metric) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -86,7 +89,7 @@ func (s *InMemStorage) Add(m metric.Metric) {
 	}
 }
 
-// GetAll returns all metrics from inMemStore
+// GetAll returns all metrics from inmemstore
 func (s *InMemStorage) GetAll() metric.Metrics {
 	s.mutex.RLock()
 	duplicate := make(metric.Metrics, len(s.metrics))
@@ -107,7 +110,7 @@ func (s *InMemStorage) Get(name string) (metric.Metric, bool) {
 	return metric.Metric{}, false
 }
 
-// Ping for in-memory inMemStore is default true
+// Ping for in-memory inmemstore is default true
 // because it doesn't need a connection. I use this function
 // for common interface
 func (s *InMemStorage) Ping() error {

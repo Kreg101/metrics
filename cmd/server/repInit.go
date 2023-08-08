@@ -4,26 +4,20 @@ import (
 	"database/sql"
 	"github.com/Kreg101/metrics/internal/server/db/client"
 	"github.com/Kreg101/metrics/internal/server/handler"
-	"github.com/Kreg101/metrics/internal/server/inMemStore"
+	"github.com/Kreg101/metrics/internal/server/inmemstore"
 	"go.uber.org/zap"
 )
 
-func repInit(repository handler.Repository, log *zap.SugaredLogger) error {
-	var err error
+func repInit(log *zap.SugaredLogger) (handler.Repository, error) {
 	if useDB {
 		db, err := sql.Open("pgx", databaseDSN)
 		if err != nil {
 			log.Errorf("can't connect to data base: %e", err)
-			return err
+			return nil, err
 		}
-		repository = client.NewClient(db)
-		return nil
+		return client.NewClient(db), nil
 	}
 
-	repository, err = inMemStore.NewInMemStorage(storagePath, storeInterval, restore, log)
-	if err != nil {
-		return err
-	}
+	return inmemstore.NewInMemStorage(storagePath, storeInterval, restore, log)
 
-	return nil
 }

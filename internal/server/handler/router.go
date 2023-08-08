@@ -20,8 +20,7 @@ type Mux struct {
 }
 
 func NewMux(storage Repository, log *zap.SugaredLogger) *Mux {
-	mux := &Mux{}
-	mux.storage = storage
+	mux := &Mux{storage: storage}
 
 	if log == nil {
 		mux.log = logger.Default()

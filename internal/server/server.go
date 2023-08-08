@@ -7,14 +7,11 @@ import (
 )
 
 type Server struct {
-	mux  *handler.Mux
-	host string
+	mux *handler.Mux
 }
 
 func NewServer(repository handler.Repository, log *zap.SugaredLogger) *Server {
-	serv := &Server{nil, ""}
-	serv.mux = handler.NewMux(repository, log)
-	return serv
+	return &Server{handler.NewMux(repository, log)}
 }
 
 func (s *Server) Start(addr string) error {

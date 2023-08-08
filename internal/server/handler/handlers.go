@@ -26,7 +26,7 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mux.log.Infof("no metric %s and type %s in inMemStore", name, mType)
+	mux.log.Infof("no metric %s and type %s in inmemstore", name, mType)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -122,7 +122,7 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		mux.log.Infof("no %s metric in inMemStore", m.ID)
+		mux.log.Infof("no %s metric in inmemstore", m.ID)
 		return
 	}
 
