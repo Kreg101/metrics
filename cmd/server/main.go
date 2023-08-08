@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"github.com/Kreg101/metrics/internal/server"
 	"github.com/Kreg101/metrics/internal/server/db/client"
 	"github.com/Kreg101/metrics/internal/server/logger"
@@ -31,12 +30,11 @@ func main() {
 		}(repository, time.Duration(storeInterval)*time.Second)
 	}
 
-	db, err := sql.Open("pgx", databaseDSN)
+	dbClient, err := client.Open(databaseDSN)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
-	dbClient := client.NewClient(db)
+	defer dbClient.Close()
 
 	s := server.NewServer(repository, log, dbClient)
 	err = s.Start(endpoint)
