@@ -58,7 +58,7 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 	return res
 }
 
-func sendMetricJson(client *resty.Client, url string, m metric.Metric) {
+func sendMetricJSON(client *resty.Client, url string, m metric.Metric) {
 	_, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
 
 	if err != nil {
@@ -75,19 +75,11 @@ func (a *Agent) Start() {
 		for range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(a.stats) {
 				m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: &v}
-				go sendMetricJson(client, url, m)
+				go sendMetricJSON(client, url, m)
 			}
 
 			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount, Value: nil}
-			go sendMetricJson(client, url, m)
-
-			//url = a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
-			//go func(url string, client *resty.Client) {
-			//	_, err := client.R().Post(url)
-			//	if err != nil {
-			//		fmt.Println(err)
-			//	}
-			//}(url, client)
+			go sendMetricJSON(client, url, m)
 		}
 	}()
 

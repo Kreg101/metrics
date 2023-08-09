@@ -10,5 +10,4 @@ func main() {
 
 	a := agent.NewAgent(flagPollInterval, flagReportInterval, "http://"+flagEndpoint)
 	a.Start()
-
 }
