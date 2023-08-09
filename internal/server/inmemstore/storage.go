@@ -2,7 +2,6 @@ package inmemstore
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"go.uber.org/zap"
@@ -23,7 +22,9 @@ type InMemStorage struct {
 }
 
 // NewInMemStorage returns initialized inmemstore pointer
-func NewInMemStorage(path string, storeInterval int, loadFromFile bool, log *zap.SugaredLogger) (*InMemStorage, error) {
+func NewInMemStorage(path string, storeInterval int,
+	loadFromFile bool, log *zap.SugaredLogger) (*InMemStorage, error) {
+
 	storage := &InMemStorage{}
 	storage.metrics = metric.Metrics{}
 	storage.mutex = &sync.RWMutex{}
@@ -45,7 +46,11 @@ func NewInMemStorage(path string, storeInterval int, loadFromFile bool, log *zap
 		return nil, err
 	}
 
-	storage.filer = Filer{file, json.NewEncoder(file), json.NewDecoder(file)}
+	storage.filer = Filer{
+		file:    file,
+		encoder: json.NewEncoder(file),
+		decoder: json.NewDecoder(file),
+	}
 
 	// проверяем, нужно ли нам загружать данные из файла при старте
 	if loadFromFile {
@@ -65,8 +70,6 @@ func NewInMemStorage(path string, storeInterval int, loadFromFile bool, log *zap
 			}
 		}(storage, time.Duration(storeInterval)*time.Second)
 	}
-
-	fmt.Println("here")
 
 	return storage, nil
 }
@@ -89,6 +92,16 @@ func (s *InMemStorage) Add(m metric.Metric) {
 	}
 }
 
+// Get return an element, true if it exists in map or nil, false if it's not
+func (s *InMemStorage) Get(name string) (metric.Metric, bool) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	if v, ok := s.metrics[name]; ok {
+		return v, ok
+	}
+	return metric.Metric{}, false
+}
+
 // GetAll returns all metrics from inmemstore
 func (s *InMemStorage) GetAll() metric.Metrics {
 	s.mutex.RLock()
@@ -98,16 +111,6 @@ func (s *InMemStorage) GetAll() metric.Metrics {
 	}
 	s.mutex.RUnlock()
 	return duplicate
-}
-
-// Get return an element, true if it exists in map or nil, false if it's not
-func (s *InMemStorage) Get(name string) (metric.Metric, bool) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	if v, ok := s.metrics[name]; ok {
-		return v, ok
-	}
-	return metric.Metric{}, false
 }
 
 // Ping for in-memory inmemstore is default true

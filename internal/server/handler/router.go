@@ -9,8 +9,8 @@ import (
 
 type Repository interface {
 	Add(metric.Metric)
-	GetAll() metric.Metrics
 	Get(name string) (metric.Metric, bool)
+	GetAll() metric.Metrics
 	Ping() error
 }
 
