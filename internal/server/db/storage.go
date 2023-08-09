@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+// -d="host=localhost user=postgres password=Kravchenko01 dbname=really sslmode=disable" - параметры командной строки
+
 // Storage структура для работы с базой данных. Содержит в себе соединение и логер.
 // Реализует интерфейс handler.Repository
 type Storage struct {
