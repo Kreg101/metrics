@@ -11,8 +11,7 @@ import (
 	"time"
 )
 
-// Storage структура для работы с базой данных.
-// Содержит в себе соединение и логер.
+// Storage структура для работы с базой данных. Содержит в себе соединение и логер.
 // Реализует интерфейс handler.Repository
 type Storage struct {
 	conn *sql.DB
@@ -66,12 +65,12 @@ func (s Storage) Add(m metric.Metric) {
 	}
 
 	// проверяем существование метрики в хранилище
-	q := s.conn.QueryRowContext(context.Background(),
+	row := s.conn.QueryRowContext(context.Background(),
 		`SELECT EXISTS (SELECT * FROM metrics WHERE $1 = id AND $2 = mtype)`,
 		m.ID, m.MType)
 
 	var inStore bool
-	err := q.Scan(&inStore)
+	err := row.Scan(&inStore)
 	if err != nil {
 		panic(err)
 	}
@@ -103,10 +102,10 @@ func (s Storage) Add(m metric.Metric) {
 // либо пустую метрику и false, если ее нет
 func (s Storage) Get(name string) (metric.Metric, bool) {
 	m := metric.Metric{Delta: new(int64), Value: new(float64)}
-	q := s.conn.QueryRowContext(context.Background(),
+	row := s.conn.QueryRowContext(context.Background(),
 		`SELECT * FROM metrics WHERE id = $1`, name)
 
-	err := q.Scan(&m.ID, &m.MType, m.Delta, m.Value)
+	err := row.Scan(&m.ID, &m.MType, m.Delta, m.Value)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			s.log.Errorf("can't get existing value from data base: %e", err)
@@ -129,9 +128,10 @@ func normal(m metric.Metric) metric.Metric {
 	return res
 }
 
+// GetAll получает все метрики из базы данных и пытается иx преобразовать к metric.Metrics
 func (s Storage) GetAll() metric.Metrics {
 	metrics := make(metric.Metrics, 0)
-	q, err := s.conn.QueryContext(context.Background(),
+	rows, err := s.conn.QueryContext(context.Background(),
 		`SELECT * FROM metrics`)
 
 	if err != nil {
@@ -139,15 +139,24 @@ func (s Storage) GetAll() metric.Metrics {
 		return nil
 	}
 
-	for q.Next() {
+	defer rows.Close()
+
+	for rows.Next() {
 		m := metric.Metric{Delta: new(int64), Value: new(float64)}
 
-		err = q.Scan(&m.ID, &m.MType, m.Delta, m.Value)
+		err = rows.Scan(&m.ID, &m.MType, m.Delta, m.Value)
 		if err != nil {
+			s.log.Errorf("can't get metric %s from data base: %e", m, err)
 			return nil
 		}
 
 		metrics[m.ID] = normal(m)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		s.log.Errorf("can't parse metrics from rows: %e", err)
+		return nil
 	}
 
 	return metrics
