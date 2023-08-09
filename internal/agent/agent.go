@@ -58,55 +58,36 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 	return res
 }
 
+func sendMetricJson(client *resty.Client, url string, m metric.Metric) {
+	_, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
+
+	if err != nil {
+		fmt.Printf("can't send metric to server: %e\n", err)
+	}
+}
+
 func (a *Agent) Start() {
 	client := resty.New()
 	var pollCount int64
+	url := a.host + "/update/"
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
-			url := a.host + "/update/"
-			mp := getMapOfStats(a.stats)
-			fmt.Println(mp)
-			for k, v := range mp {
-				//url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
-				//go func(url string, client *resty.Client) {
-				//	_, err := client.R().Post(url)
-				//	if err != nil {
-				//		fmt.Println(err)
-				//	}
-				//}(url, client)
-
+			for k, v := range getMapOfStats(a.stats) {
 				m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: &v}
-				go func(url string, m metric.Metric) {
-					resp, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
-
-					if err != nil {
-						fmt.Println(err)
-					}
-
-					//		//req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(marshalled))
-					//		//if err != nil {
-					//		//	fmt.Println(err)
-					//		//}
-					//		//req.Header.Set()
-					//		//c := http.Client{}
-					//		//resp, err := c.Do(req)
-					//		//if err != nil {
-					//		//	fmt.Println(err)
-					//		//}
-
-					fmt.Println(resp.StatusCode())
-				}(url, m)
-
+				go sendMetricJson(client, url, m)
 			}
 
-			url = a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
-			go func(url string, client *resty.Client) {
-				_, err := client.R().Post(url)
-				if err != nil {
-					fmt.Println(err)
-				}
-			}(url, client)
+			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount, Value: nil}
+			go sendMetricJson(client, url, m)
+
+			//url = a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
+			//go func(url string, client *resty.Client) {
+			//	_, err := client.R().Post(url)
+			//	if err != nil {
+			//		fmt.Println(err)
+			//	}
+			//}(url, client)
 		}
 	}()
 
