@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/go-chi/chi/v5"
@@ -8,10 +9,10 @@ import (
 )
 
 type Repository interface {
-	Add(metric.Metric)
-	Get(name string) (metric.Metric, bool)
-	GetAll() metric.Metrics
-	Ping() error
+	Add(ctx context.Context, m metric.Metric)
+	Get(ctx context.Context, name string) (metric.Metric, bool)
+	GetAll(ctx context.Context) metric.Metrics
+	Ping(ctx context.Context) error
 }
 
 type Mux struct {

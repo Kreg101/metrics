@@ -2,6 +2,7 @@ package inmemstore
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/Kreg101/metrics/internal/metric"
 	"io"
@@ -86,7 +87,7 @@ func (s *InMemStorage) Write() {
 		return
 	}
 
-	for _, m := range s.GetAll() {
+	for _, m := range s.GetAll(context.Background()) {
 		err := s.filer.writeMetric(&m)
 		if err != nil {
 			s.log.Errorf("can't add metric %v to file: %s", m, err)

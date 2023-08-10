@@ -1,6 +1,7 @@
 package inmemstore
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
@@ -75,7 +76,7 @@ func NewInMemStorage(path string, storeInterval int,
 }
 
 // Add (add metric to inmemstore)
-func (s *InMemStorage) Add(m metric.Metric) {
+func (s *InMemStorage) Add(ctx context.Context, m metric.Metric) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if m.MType == "counter" {
@@ -93,7 +94,7 @@ func (s *InMemStorage) Add(m metric.Metric) {
 }
 
 // Get return an element, true if it exists in map or nil, false if it's not
-func (s *InMemStorage) Get(name string) (metric.Metric, bool) {
+func (s *InMemStorage) Get(ctx context.Context, name string) (metric.Metric, bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if v, ok := s.metrics[name]; ok {
@@ -103,7 +104,7 @@ func (s *InMemStorage) Get(name string) (metric.Metric, bool) {
 }
 
 // GetAll returns all metrics from inmemstore
-func (s *InMemStorage) GetAll() metric.Metrics {
+func (s *InMemStorage) GetAll(ctx context.Context) metric.Metrics {
 	s.mutex.RLock()
 	duplicate := make(metric.Metrics, len(s.metrics))
 	for k, v := range s.metrics {
@@ -116,6 +117,6 @@ func (s *InMemStorage) GetAll() metric.Metrics {
 // Ping for in-memory inmemstore is default true
 // because it doesn't need a connection. I use this function
 // for common interface
-func (s *InMemStorage) Ping() error {
+func (s *InMemStorage) Ping(ctx context.Context) error {
 	return nil
 }

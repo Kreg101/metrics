@@ -58,7 +58,17 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 	return res
 }
 
-func sendMetricJSON(client *resty.Client, url string, m metric.Metric) {
+func sendGaugeJSON(client *resty.Client, url string, k string, v float64) {
+	m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: &v}
+	_, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
+
+	if err != nil {
+		fmt.Printf("can't send metric to server: %e\n", err)
+	}
+}
+
+func sendCounterJSON(client *resty.Client, url string, k string, v int64) {
+	m := metric.Metric{ID: k, MType: "gauge", Delta: &v, Value: nil}
 	_, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
 
 	if err != nil {
@@ -74,12 +84,10 @@ func (a *Agent) Start() {
 	go func() {
 		for range time.Tick(a.sendFreq) {
 			for k, v := range getMapOfStats(a.stats) {
-				m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: &v}
-				go sendMetricJSON(client, url, m)
+				go sendGaugeJSON(client, url, k, v)
 			}
 
-			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount, Value: nil}
-			go sendMetricJSON(client, url, m)
+			go sendCounterJSON(client, url, "PollCount", pollCount)
 		}
 	}()
 

@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/Kreg101/metrics/internal/agent"
-)
+import "github.com/Kreg101/metrics/internal/agent"
 
 func main() {
 
@@ -10,4 +8,5 @@ func main() {
 
 	a := agent.NewAgent(flagPollInterval, flagReportInterval, "http://"+flagEndpoint)
 	a.Start()
+
 }
