@@ -98,8 +98,8 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	mux.storage.Add(r.Context(), m)
 
 	w.Header().Set("Content-Type", "application/json")
-	e := json.NewEncoder(w).Encode(m)
-	if e != nil {
+	err = json.NewEncoder(w).Encode(m)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		mux.log.Errorf("can't marshal %v", m)
 		return
@@ -145,4 +145,34 @@ func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
+	var metrics []metric.Metric
+
+	err := json.NewDecoder(r.Body).Decode(&metrics)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		mux.log.Errorf("can't unmarshal json %s to metrics slice", r.Body)
+		return
+	}
+
+	for _, m := range metrics {
+		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
+			w.WriteHeader(http.StatusBadRequest)
+			mux.log.Errorf("empty delta or value in request")
+			return
+		}
+
+		mux.storage.Add(r.Context(), m)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(metrics)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		mux.log.Errorf("can't marshal %v", metrics)
+		return
+	}
 }
