@@ -41,5 +41,6 @@ func (mux *Mux) Router() chi.Router {
 	router.Post("/update/{type}/{name}/{value}", logging(compression(mux.updateMetric)))
 	router.Post("/update/", logging(compression(mux.updateMetricWithBody)))
 	router.Post("/value/", logging(compression(mux.getMetric)))
+	router.Post("/updates/", logging(compression(mux.updates)))
 	return router
 }
