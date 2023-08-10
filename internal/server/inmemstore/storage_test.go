@@ -1,6 +1,7 @@
 package inmemstore
 
 import (
+	"context"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/stretchr/testify/assert"
@@ -103,7 +104,7 @@ func TestInMemStorage_Add(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.base.Add(tc.value)
+			tc.base.Add(context.Background(), tc.value)
 			assert.Equal(t, tc.expected, tc.base)
 		})
 	}
@@ -145,7 +146,7 @@ func TestInMemStorage_Get(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			s := InMemStorage{mutex: &sync.RWMutex{}, metrics: tc.source}
-			res, ok := s.Get(tc.key)
+			res, ok := s.Get(context.Background(), tc.key)
 			require.Equal(t, tc.ok, ok)
 			assert.Equal(t, tc.value, res)
 		})
@@ -175,7 +176,7 @@ func TestInMemStorage_GetAll(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, tc.s.GetAll())
+			assert.Equal(t, tc.want, tc.s.GetAll(context.Background()))
 		})
 	}
 }
