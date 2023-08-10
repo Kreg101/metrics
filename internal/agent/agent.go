@@ -68,7 +68,7 @@ func sendGaugeJSON(client *resty.Client, url string, k string, v float64) {
 }
 
 func sendCounterJSON(client *resty.Client, url string, k string, v int64) {
-	m := metric.Metric{ID: k, MType: "gauge", Delta: &v, Value: nil}
+	m := metric.Metric{ID: k, MType: "counter", Delta: &v, Value: nil}
 	_, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
 
 	if err != nil {
