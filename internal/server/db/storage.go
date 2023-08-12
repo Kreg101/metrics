@@ -80,10 +80,13 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 		panic(err)
 	}
 
-	switch inStore {
-	case true:
+	if inStore {
 		switch m.MType {
 		case "counter":
+
+			if m.MType == "counter" {
+				fmt.Println("another", m.ID, m.MType, *m.Delta, m.Value)
+			}
 			// по ТЗ нам нужно вернуть обновленное значение метрики, поэтому после обновления
 			// вытаскиваем второй раз ее из хранилища. Чтобы эти операции происходили слитно и если что
 			// откатились, используем транзакции
@@ -123,8 +126,12 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				s.log.Errorf("can't add metric %s to storage: %e", m, err)
 			}
 		}
+	} else {
 
-	case false:
+		if m.MType == "counter" {
+			fmt.Println("new", m.ID, m.MType, *m.Delta, m.Value)
+		}
+
 		_, err = s.conn.ExecContext(ctx,
 			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
 			m.ID, m.MType, *m.Delta, *m.Value)
@@ -132,6 +139,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 		if err != nil {
 			fmt.Printf("something bad: %e", err)
 			s.log.Errorf("can't add metric %s to storage: %e", m, err)
+			return
 		}
 
 		m = normal(m)
@@ -188,11 +196,6 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 	}
 
 	return metrics
-}
-
-// Close закрывает соединение с базой данных
-func (s Storage) Close() {
-	s.conn.Close()
 }
 
 // Ping проверяет соединение с базой данных
