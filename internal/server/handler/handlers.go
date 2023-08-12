@@ -159,8 +159,6 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 
 	for i, m := range metrics {
 
-		//fmt.Println(m.ID, m.MType, m.Delta, m.Value)
-
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 			mux.log.Errorf("empty delta or value in request")
 		}
@@ -168,12 +166,17 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 		mux.storage.Add(r.Context(), metrics[i])
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	//w.Header().Set("Content-Type", "application/json")
 
-	err = json.NewEncoder(w).Encode(metrics)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		mux.log.Errorf("can't marshal %v", metrics)
-		return
-	}
+	//err = json.NewEncoder(w).Encode(metrics)
+	//if err != nil {
+	//	w.WriteHeader(http.StatusInternalServerError)
+	//	mux.log.Errorf("can't marshal %v", metrics)
+	//	return
+	//}
+	//
+	//var b bytes.Buffer
+	//_ = json.NewEncoder(&b).Encode(metrics)
+	//
+	//fmt.Println(b.String())
 }

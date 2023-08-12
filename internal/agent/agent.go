@@ -106,22 +106,36 @@ func (a *Agent) Start() {
 			var metrics []metric.Metric
 
 			for k, v := range getMapOfStats(a.stats) {
-				m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: new(float64)}
+				m := metric.Metric{ID: k, MType: "gauge", Value: new(float64)}
 				*m.Value = v
 				metrics = append(metrics, m)
 			}
 
-			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount, Value: nil}
+			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount}
 			metrics = append(metrics, m)
 
-			for _, m := range metrics {
-				fmt.Println(m.ID, m.MType, m.Delta, m.Value)
-			}
+			_, err := client.R().SetBody(metrics).
+				SetHeader("Content-Type", "application/json").
+				SetHeader("Accept-Encoding", "gzip").
+				Post(url)
 
-			_, err := client.R().SetBody(metrics).SetHeader("Content-Type", "application/json").Post(url)
 			if err != nil {
 				fmt.Printf("can't get correct response from server: %e", err)
 			}
+
+			//var res []metric.Metric
+			//err = json.Unmarshal(resp.Body(), &res)
+			//if err != nil {
+			//	fmt.Println("ooopaaa")
+			//}
+			//
+			//for _, m := range res {
+			//	if m.MType == "gauge" {
+			//		fmt.Println(m.ID, m.MType, m.Delta, *m.Value)
+			//	} else {
+			//		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
+			//	}
+			//}
 
 		}
 	}()
