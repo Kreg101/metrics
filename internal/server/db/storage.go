@@ -3,15 +3,12 @@ package db
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 	"time"
 )
-
-// -d="host=localhost user=postgres password=Kravchenko01 dbname=really sslmode=disable" - параметры командной строки
 
 // Storage структура для работы с базой данных. Содержит в себе соединение и логер.
 // Реализует интерфейс handler.Repository
@@ -46,8 +43,8 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
 	return s, nil
 }
 
-// Normal приводит метрику к каноническому виду, после того, как ее
-// достали из хранилища
+// normal приводит метрику к каноническому виду, после того, как ее
+// достали из хранилища (возвращает nil)
 func normal(m metric.Metric) metric.Metric {
 	res := m
 	if res.MType == "gauge" {
@@ -76,10 +73,6 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 	if inStore {
 		switch m.MType {
 		case "counter":
-
-			if m.MType == "counter" {
-				fmt.Println("another", m.ID, m.MType, *m.Delta, m.Value)
-			}
 			// по ТЗ нам нужно вернуть обновленное значение метрики, поэтому после обновления
 			// вытаскиваем второй раз ее из хранилища. Чтобы эти операции происходили слитно и если что
 			// откатились, используем транзакции
@@ -101,8 +94,6 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				return
 			}
 
-			fmt.Println("previous", prev)
-
 			*m.Delta += prev
 
 			_, err = s.conn.ExecContext(ctx,
@@ -110,13 +101,9 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				*m.Delta, m.ID, m.MType)
 
 			if err != nil {
-				fmt.Println(err)
 				s.log.Errorf("can't update counter metric: %e", err)
-				//return
+				return
 			}
-
-			fmt.Println("res", m.ID, m.MType, *m.Delta, m.Value)
-
 			tx.Commit()
 
 		case "gauge":
@@ -125,16 +112,12 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				*m.Value, m.ID, m.MType)
 
 			if err != nil {
-				s.log.Errorf("can't add metric %s to storage: %e", m, err)
+				s.log.Errorf("can't update existing metric %s: %e", m, err)
+				return
 			}
 		}
 	} else {
-
-		if m.MType == "counter" {
-			fmt.Println("new", m.ID, m.MType, *m.Delta, m.Value)
-		}
-
-		// для того чтобы не рассматривать много случаев, если данной метрики еще нет в бд
+		// для того чтобы не рассматривать много случаев
 		if m.Delta == nil {
 			m.Delta = new(int64)
 		} else {
@@ -146,11 +129,11 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			m.ID, m.MType, *m.Delta, *m.Value)
 
 		if err != nil {
-			fmt.Printf("something bad: %e", err)
 			s.log.Errorf("can't add metric %s to storage: %e", m, err)
 			return
 		}
 
+		// возвращаем в исходный вид, где пустое поле - nil
 		m = normal(m)
 	}
 }
