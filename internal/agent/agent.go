@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-resty/resty/v2"
@@ -60,20 +61,39 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 
 func sendGaugeJSON(client *resty.Client, url string, k string, v float64) {
 	m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: &v}
-	_, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
+	resp, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
 
 	if err != nil {
-		fmt.Printf("can't send metric to server: %e\n", err)
+		fmt.Printf("can't send gauge metric to server: %e\n", err)
 	}
+
+	m1 := metric.Metric{}
+	err = json.Unmarshal(resp.Body(), &m1)
+	if err != nil {
+		fmt.Println("hah")
+		return
+	}
+
+	fmt.Println(m1.ID, m1.MType, m1.Delta, *m1.Value)
 }
 
 func sendCounterJSON(client *resty.Client, url string, k string, v int64) {
 	m := metric.Metric{ID: k, MType: "counter", Delta: &v, Value: nil}
-	_, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
+	resp, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
 
 	if err != nil {
 		fmt.Printf("can't send metric to server: %e\n", err)
+		return
 	}
+
+	m1 := metric.Metric{}
+	err = json.Unmarshal(resp.Body(), &m1)
+	if err != nil {
+		fmt.Println("hah")
+		return
+	}
+
+	fmt.Println(m1.ID, m1.MType, *m1.Delta, m1.Value)
 }
 
 func (a *Agent) Start() {

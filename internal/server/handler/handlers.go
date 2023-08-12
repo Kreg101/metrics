@@ -75,7 +75,7 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// в формате json передается метрика, проверяется ее корректность и возвращается она же обновленная
+// updateMetricsWithBody в формате json передается метрика, проверяется ее корректность и возвращается она же обновленная
 func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 	var m metric.Metric
 
@@ -159,9 +159,7 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 
 	for _, m := range metrics {
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
-			w.WriteHeader(http.StatusBadRequest)
 			mux.log.Errorf("empty delta or value in request")
-			return
 		}
 
 		mux.storage.Add(r.Context(), m)
