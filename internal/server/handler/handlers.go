@@ -157,13 +157,13 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i, m := range metrics {
+	for _, m := range metrics {
 
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 			mux.log.Errorf("empty delta or value in request")
 		}
 
-		mux.storage.Add(r.Context(), metrics[i])
+		mux.storage.Add(r.Context(), m)
 	}
 
 	//w.Header().Set("Content-Type", "application/json")

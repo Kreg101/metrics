@@ -22,7 +22,6 @@ type Storage struct {
 
 // NewStorage в соединении создает нужную таблицу и инициализирует внутренний логер
 func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
-	fmt.Println("here")
 	s := Storage{conn: conn}
 
 	if log != nil {
@@ -111,18 +110,24 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			_, err = s.conn.ExecContext(ctx,
 				`UPDATE metrics SET value = $1 WHERE $2 = id AND $3 = mtype`,
 				*m.Value, m.ID, m.MType)
+
+			if err != nil {
+				s.log.Errorf("can't add metric %s to storage: %e", m, err)
+			}
 		}
 
 	} else {
+
 		_, err = s.conn.ExecContext(ctx,
 			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
 			m.ID, m.MType, *m.Delta, *m.Value)
 
-		normal(m)
-	}
+		if err != nil {
+			fmt.Printf("something bad: %e", err)
+			s.log.Errorf("can't add metric %s to storage: %e", m, err)
+		}
 
-	if err != nil {
-		s.log.Errorf("can't add metric %s to storage: %e", m, err)
+		m = normal(m)
 	}
 }
 
