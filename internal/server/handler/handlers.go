@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -93,6 +94,10 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if m.MType == "counter" {
+		fmt.Println("update", m.ID, m.MType, *m.Delta, m.Value)
+	}
+
 	// За счет того, что поля Delta и Value - указатели, когда мы положим их в хранилище, они обновятся
 	// значит не нужно их снова доставать и вручную менять
 	mux.storage.Add(r.Context(), m)
@@ -124,6 +129,10 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		mux.log.Infof("no %s metric in storage", m.ID)
 		return
+	}
+
+	if m.MType == "counter" {
+		fmt.Println("get", m.ID, m.MType, *m.Delta, m.Value)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -164,6 +173,10 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 			mux.log.Errorf("empty delta or value in request")
 			continue
+		}
+
+		if m.MType == "counter" {
+			fmt.Println("updates", m.ID, m.MType, *m.Delta, m.Value)
 		}
 
 		mux.storage.Add(r.Context(), m)
