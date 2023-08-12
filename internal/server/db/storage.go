@@ -91,7 +91,6 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			defer tx.Rollback()
 
 			var prev int64
-
 			row := s.conn.QueryRowContext(ctx,
 				`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
 				m.ID, m.MType)
@@ -111,8 +110,9 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				*m.Delta, m.ID, m.MType)
 
 			if err != nil {
+				fmt.Println(err)
 				s.log.Errorf("can't update counter metric: %e", err)
-				return
+				//return
 			}
 
 			fmt.Println("res", m.ID, m.MType, *m.Delta, m.Value)
