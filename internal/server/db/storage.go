@@ -34,7 +34,7 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
         CREATE TABLE IF NOT EXISTS metrics (
             id VARCHAR(128) PRIMARY KEY,
             mtype VARCHAR(30) NOT NULL,
-            delta INTEGER,
+            delta BIGINT,
             value DOUBLE PRECISION         
         )
     `)
@@ -64,7 +64,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 	// проверяем существование метрики в хранилище
 	row := s.conn.QueryRowContext(ctx,
-		`SELECT EXISTS (SELECT * FROM metrics WHERE $1 = id AND $2 = mtype)`,
+		`SELECT EXISTS (SELECT * FROM metrics WHERE id = $1 AND mtype = $2)`,
 		m.ID, m.MType)
 
 	var inStore bool
@@ -106,7 +106,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			*m.Delta += prev
 
 			_, err = s.conn.ExecContext(ctx,
-				`UPDATE metrics SET delta = $1 WHERE $2 = id AND $3 = mtype`,
+				`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3`,
 				*m.Delta, m.ID, m.MType)
 
 			if err != nil {
@@ -121,7 +121,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 		case "gauge":
 			_, err = s.conn.ExecContext(ctx,
-				`UPDATE metrics SET value = $1 WHERE $2 = id AND $3 = mtype`,
+				`UPDATE metrics SET value = $1 WHERE id = $2 AND mtype = $3`,
 				*m.Value, m.ID, m.MType)
 
 			if err != nil {
