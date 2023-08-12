@@ -62,13 +62,6 @@ func normal(m metric.Metric) metric.Metric {
 // Гарантируется, что сюда поступают правильные метрики
 func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
-	// для того чтобы не рассматривать много случаев, если данной метрики еще нет в бд
-	if m.Delta == nil {
-		m.Delta = new(int64)
-	} else {
-		m.Value = new(float64)
-	}
-
 	// проверяем существование метрики в хранилище
 	row := s.conn.QueryRowContext(ctx,
 		`SELECT EXISTS (SELECT * FROM metrics WHERE $1 = id AND $2 = mtype)`,
@@ -97,8 +90,24 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			}
 			defer tx.Rollback()
 
+			var prev int64
+
+			row := s.conn.QueryRowContext(ctx,
+				`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
+				m.ID, m.MType)
+
+			err = row.Scan(&prev)
+			if err != nil {
+				s.log.Errorf("can't get metric value after update: %e", err)
+				return
+			}
+
+			fmt.Println("previous", prev)
+
+			*m.Delta += prev
+
 			_, err = s.conn.ExecContext(ctx,
-				`UPDATE metrics SET delta = delta + $1 WHERE $2 = id AND $3 = mtype`,
+				`UPDATE metrics SET delta = $1 WHERE $2 = id AND $3 = mtype`,
 				*m.Delta, m.ID, m.MType)
 
 			if err != nil {
@@ -106,15 +115,8 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				return
 			}
 
-			row := s.conn.QueryRowContext(ctx,
-				`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
-				m.ID, m.MType)
+			fmt.Println("res", m.ID, m.MType, *m.Delta, m.Value)
 
-			err = row.Scan(m.Delta)
-			if err != nil {
-				s.log.Errorf("can't get metric value after update: %e", err)
-				return
-			}
 			tx.Commit()
 
 		case "gauge":
@@ -130,6 +132,13 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 		if m.MType == "counter" {
 			fmt.Println("new", m.ID, m.MType, *m.Delta, m.Value)
+		}
+
+		// для того чтобы не рассматривать много случаев, если данной метрики еще нет в бд
+		if m.Delta == nil {
+			m.Delta = new(int64)
+		} else {
+			m.Value = new(float64)
 		}
 
 		_, err = s.conn.ExecContext(ctx,
