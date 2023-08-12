@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -86,6 +87,10 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if m.MType == "counter" {
+		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
+	}
+
 	// Проверяем что метрика с таким типом и значением корректна
 	if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -116,6 +121,10 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		mux.log.Errorf("can't unmarshal json %s to %v", r.Body, m)
 		return
+	}
+
+	if m.MType == "counter" {
+		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
 	}
 
 	if v, ok := mux.storage.Get(r.Context(), m.ID); ok && v.MType == m.MType {
@@ -158,6 +167,10 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, m := range metrics {
+
+		if m.MType == "counter" {
+			fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
+		}
 
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 			mux.log.Errorf("empty delta or value in request")
