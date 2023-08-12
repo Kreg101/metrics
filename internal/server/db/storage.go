@@ -108,7 +108,6 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 		case "gauge":
 
-			fmt.Println(m.ID, m.MType, *m.Value)
 			_, err = s.conn.ExecContext(ctx,
 				`UPDATE metrics SET value = $1 WHERE $2 = id AND $3 = mtype`,
 				*m.Value, m.ID, m.MType)
@@ -119,7 +118,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
 			m.ID, m.MType, *m.Delta, *m.Value)
 
-		//normal(m)
+		normal(m)
 	}
 
 	if err != nil {

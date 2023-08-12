@@ -148,7 +148,7 @@ func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
 }
 
 func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
-	var metrics *[]metric.Metric
+	var metrics []metric.Metric
 
 	err := json.NewDecoder(r.Body).Decode(&metrics)
 	if err != nil {
@@ -157,12 +157,15 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, m := range *metrics {
+	for i, m := range metrics {
+
+		//fmt.Println(m.ID, m.MType, m.Delta, m.Value)
+
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 			mux.log.Errorf("empty delta or value in request")
 		}
 
-		mux.storage.Add(r.Context(), m)
+		mux.storage.Add(r.Context(), metrics[i])
 	}
 
 	w.Header().Set("Content-Type", "application/json")

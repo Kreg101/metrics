@@ -99,15 +99,30 @@ func sendCounterJSON(client *resty.Client, url string, k string, v int64) {
 func (a *Agent) Start() {
 	client := resty.New()
 	var pollCount int64
-	url := a.host + "/update/"
+	url := a.host + "/updates/"
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
+			var metrics []metric.Metric
+
 			for k, v := range getMapOfStats(a.stats) {
-				go sendGaugeJSON(client, url, k, v)
+				m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: new(float64)}
+				*m.Value = v
+				metrics = append(metrics, m)
 			}
 
-			go sendCounterJSON(client, url, "PollCount", pollCount)
+			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount, Value: nil}
+			metrics = append(metrics, m)
+
+			for _, m := range metrics {
+				fmt.Println(m.ID, m.MType, m.Delta, m.Value)
+			}
+
+			_, err := client.R().SetBody(metrics).SetHeader("Content-Type", "application/json").Post(url)
+			if err != nil {
+				fmt.Printf("can't get correct response from server: %e", err)
+			}
+
 		}
 	}()
 
