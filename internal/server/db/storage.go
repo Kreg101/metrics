@@ -46,6 +46,18 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
 	return s, nil
 }
 
+// Normal приводит метрику к каноническому виду, после того, как ее
+// достали из хранилища
+func normal(m metric.Metric) metric.Metric {
+	res := m
+	if res.MType == "gauge" {
+		res.Delta = nil
+	} else {
+		res.Value = nil
+	}
+	return res
+}
+
 // Add добавляет метрику в бд. Если она там уже есть, то обновляет ее значение в соответствие с типом метрики
 // Гарантируется, что сюда поступают правильные метрики
 func (s Storage) Add(ctx context.Context, m metric.Metric) {
@@ -68,20 +80,18 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 		panic(err)
 	}
 
-	if inStore {
+	switch inStore {
+	case true:
 		switch m.MType {
 		case "counter":
-
 			// по ТЗ нам нужно вернуть обновленное значение метрики, поэтому после обновления
 			// вытаскиваем второй раз ее из хранилища. Чтобы эти операции происходили слитно и если что
 			// откатились, используем транзакции
 			tx, err := s.conn.BeginTx(ctx, nil)
-
 			if err != nil {
 				s.log.Errorf("can't use transaction: %e", err)
 				return
 			}
-
 			defer tx.Rollback()
 
 			_, err = s.conn.ExecContext(ctx,
@@ -102,11 +112,9 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				s.log.Errorf("can't get metric value after update: %e", err)
 				return
 			}
-
 			tx.Commit()
 
 		case "gauge":
-
 			_, err = s.conn.ExecContext(ctx,
 				`UPDATE metrics SET value = $1 WHERE $2 = id AND $3 = mtype`,
 				*m.Value, m.ID, m.MType)
@@ -116,8 +124,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			}
 		}
 
-	} else {
-
+	case false:
 		_, err = s.conn.ExecContext(ctx,
 			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
 			m.ID, m.MType, *m.Delta, *m.Value)
@@ -147,18 +154,6 @@ func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
 	}
 
 	return normal(m), true
-}
-
-// Normal приводит метрику к каноническому виду, после того, как ее
-// достали из хранилища
-func normal(m metric.Metric) metric.Metric {
-	res := m
-	if res.MType == "gauge" {
-		res.Delta = nil
-	} else {
-		res.Value = nil
-	}
-	return res
 }
 
 // GetAll получает все метрики из базы данных и пытается иx преобразовать к metric.Metrics

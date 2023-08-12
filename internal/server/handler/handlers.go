@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -94,10 +93,6 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if m.MType == "counter" {
-		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
-	}
-
 	// За счет того, что поля Delta и Value - указатели, когда мы положим их в хранилище, они обновятся
 	// значит не нужно их снова доставать и вручную менять
 	mux.storage.Add(r.Context(), m)
@@ -127,12 +122,8 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		mux.log.Infof("no %s metric in inmemstore", m.ID)
+		mux.log.Infof("no %s metric in storage", m.ID)
 		return
-	}
-
-	if m.MType == "counter" {
-		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -145,6 +136,7 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ping проверяет соединение с хранилищем
 func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
 	err := mux.storage.Ping(r.Context())
 	if err != nil {
@@ -156,6 +148,7 @@ func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// updates позволяет обновлять хранилище не 1 метрикой, а целым батчем
 func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 	var metrics []metric.Metric
 
@@ -173,24 +166,6 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		if m.MType == "counter" {
-			fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
-		}
-
 		mux.storage.Add(r.Context(), m)
 	}
-
-	//w.Header().Set("Content-Type", "application/json")
-
-	//err = json.NewEncoder(w).Encode(metrics)
-	//if err != nil {
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	mux.log.Errorf("can't marshal %v", metrics)
-	//	return
-	//}
-	//
-	//var b bytes.Buffer
-	//_ = json.NewEncoder(&b).Encode(metrics)
-	//
-	//fmt.Println(b.String())
 }

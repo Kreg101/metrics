@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-resty/resty/v2"
@@ -59,47 +58,9 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 	return res
 }
 
-func sendGaugeJSON(client *resty.Client, url string, k string, v float64) {
-	m := metric.Metric{ID: k, MType: "gauge", Delta: nil, Value: &v}
-	resp, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
-
-	if err != nil {
-		fmt.Printf("can't send gauge metric to server: %e\n", err)
-	}
-
-	m1 := metric.Metric{}
-	err = json.Unmarshal(resp.Body(), &m1)
-	if err != nil {
-		fmt.Println("hah")
-		return
-	}
-
-	fmt.Println(m1.ID, m1.MType, m1.Delta, *m1.Value)
-}
-
-func sendCounterJSON(client *resty.Client, url string, k string, v int64) {
-	m := metric.Metric{ID: k, MType: "counter", Delta: &v, Value: nil}
-	resp, err := client.R().SetBody(m).SetHeader("Content-Type", "application/json").Post(url)
-
-	if err != nil {
-		fmt.Printf("can't send metric to server: %e\n", err)
-		return
-	}
-
-	m1 := metric.Metric{}
-	err = json.Unmarshal(resp.Body(), &m1)
-	if err != nil {
-		fmt.Println("hah")
-		return
-	}
-
-	fmt.Println(m1.ID, m1.MType, *m1.Delta, m1.Value)
-}
-
 func (a *Agent) Start() {
 	client := resty.New()
 	var pollCount int64
-	url := a.host + "/updates/"
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
@@ -117,26 +78,11 @@ func (a *Agent) Start() {
 			_, err := client.R().SetBody(metrics).
 				SetHeader("Content-Type", "application/json").
 				SetHeader("Accept-Encoding", "gzip").
-				Post(url)
+				Post(a.host + "/updates/")
 
 			if err != nil {
 				fmt.Printf("can't get correct response from server: %e", err)
 			}
-
-			//var res []metric.Metric
-			//err = json.Unmarshal(resp.Body(), &res)
-			//if err != nil {
-			//	fmt.Println("ooopaaa")
-			//}
-			//
-			//for _, m := range res {
-			//	if m.MType == "gauge" {
-			//		fmt.Println(m.ID, m.MType, m.Delta, *m.Value)
-			//	} else {
-			//		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
-			//	}
-			//}
-
 		}
 	}()
 
