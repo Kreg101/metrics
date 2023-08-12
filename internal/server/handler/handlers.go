@@ -87,15 +87,15 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if m.MType == "counter" {
-		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
-	}
-
 	// Проверяем что метрика с таким типом и значением корректна
 	if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 		w.WriteHeader(http.StatusBadRequest)
 		mux.log.Errorf("empty delta or value in request")
 		return
+	}
+
+	if m.MType == "counter" {
+		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
 	}
 
 	// За счет того, что поля Delta и Value - указатели, когда мы положим их в хранилище, они обновятся
@@ -123,16 +123,16 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if m.MType == "counter" {
-		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
-	}
-
 	if v, ok := mux.storage.Get(r.Context(), m.ID); ok && v.MType == m.MType {
 		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 		mux.log.Infof("no %s metric in inmemstore", m.ID)
 		return
+	}
+
+	if m.MType == "counter" {
+		fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -168,12 +168,13 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 
 	for _, m := range metrics {
 
-		if m.MType == "counter" {
-			fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
-		}
-
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 			mux.log.Errorf("empty delta or value in request")
+			continue
+		}
+
+		if m.MType == "counter" {
+			fmt.Println(m.ID, m.MType, *m.Delta, m.Value)
 		}
 
 		mux.storage.Add(r.Context(), m)
