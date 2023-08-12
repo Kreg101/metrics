@@ -101,10 +101,15 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				*m.Delta, m.ID, m.MType)
 
 			if err != nil {
-				s.log.Errorf("can't update counter metric: %e", err)
+				s.log.Errorf("can't update counter metric: %s", err.Error())
 				return
 			}
-			tx.Commit()
+
+			err = tx.Commit()
+			if err != nil {
+				s.log.Errorf("can't commit transaction: %s", err.Error())
+				return
+			}
 
 		case "gauge":
 			_, err = s.conn.ExecContext(ctx,
