@@ -54,6 +54,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 	var inStore bool
 	err := row.Scan(&inStore)
+
 	if err != nil {
 		panic(err)
 	}
