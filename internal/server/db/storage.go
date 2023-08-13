@@ -98,7 +98,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 			_, err = s.conn.ExecContext(ctx,
 				`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3`,
-				*m.Delta, m.ID, m.MType)
+				m.Delta, m.ID, m.MType)
 
 			if err != nil {
 				s.log.Errorf("can't update counter metric: %s", err.Error())
@@ -114,7 +114,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 		case "gauge":
 			_, err = s.conn.ExecContext(ctx,
 				`UPDATE metrics SET value = $1 WHERE id = $2 AND mtype = $3`,
-				*m.Value, m.ID, m.MType)
+				m.Value, m.ID, m.MType)
 
 			if err != nil {
 				s.log.Errorf("can't update existing metric %s: %e", m, err)
@@ -131,7 +131,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 		_, err = s.conn.ExecContext(ctx,
 			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
-			m.ID, m.MType, *m.Delta, *m.Value)
+			m.ID, m.MType, m.Delta, m.Value)
 
 		if err != nil {
 			s.log.Errorf("can't add metric %s to storage: %e", m, err)
