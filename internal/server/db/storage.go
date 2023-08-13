@@ -43,18 +43,6 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
 	return s, nil
 }
 
-// normal приводит метрику к каноническому виду, после того, как ее
-// достали из хранилища (возвращает nil)
-func normal(m metric.Metric) metric.Metric {
-	res := m
-	if res.MType == "gauge" {
-		res.Delta = nil
-	} else {
-		res.Value = nil
-	}
-	return res
-}
-
 // Add добавляет метрику в бд. Если она там уже есть, то обновляет ее значение в соответствие с типом метрики
 // Гарантируется, что сюда поступают правильные метрики
 func (s Storage) Add(ctx context.Context, m metric.Metric) {
@@ -122,13 +110,6 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			}
 		}
 	} else {
-		//// для того чтобы не рассматривать много случаев
-		//if m.Delta == nil {
-		//	m.Delta = new(int64)
-		//} else {
-		//	m.Value = new(float64)
-		//}
-
 		_, err = s.conn.ExecContext(ctx,
 			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
 			m.ID, m.MType, m.Delta, m.Value)
@@ -137,9 +118,6 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			s.log.Errorf("can't add metric %s to storage: %e", m, err)
 			return
 		}
-
-		// возвращаем в исходный вид, где пустое поле - nil
-		//m = normal(m)
 	}
 }
 
@@ -158,7 +136,6 @@ func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
 		return metric.Metric{}, false
 	}
 
-	//return normal(m), true
 	return m, true
 }
 
@@ -172,10 +149,10 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 		s.log.Errorf("can't get all elements from data base: %e", err)
 		return nil
 	}
-
 	defer rows.Close()
 
 	for rows.Next() {
+
 		m := metric.Metric{Delta: new(int64), Value: new(float64)}
 
 		err = rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
@@ -184,7 +161,6 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 			return nil
 		}
 
-		//metrics[m.ID] = normal(m)
 		metrics[m.ID] = m
 	}
 
