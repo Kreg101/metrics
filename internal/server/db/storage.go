@@ -71,6 +71,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			}
 			defer tx.Rollback()
 
+			// считываем предыдущее значение метрики
 			var prev int64
 			row := s.conn.QueryRowContext(ctx,
 				`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
@@ -82,6 +83,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 				return
 			}
 
+			// обновляем текущую
 			*m.Delta += prev
 
 			_, err = s.conn.ExecContext(ctx,
@@ -124,7 +126,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 // Get возвращает метрику из хранилища по имени и true, если она есть,
 // либо пустую метрику и false, если ее нет
 func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
-	m := metric.Metric{Delta: new(int64), Value: new(float64)}
+	m := metric.Metric{}
 	row := s.conn.QueryRowContext(ctx,
 		`SELECT * FROM metrics WHERE id = $1`, name)
 
@@ -153,7 +155,7 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 
 	for rows.Next() {
 
-		m := metric.Metric{Delta: new(int64), Value: new(float64)}
+		m := metric.Metric{}
 
 		err = rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 		if err != nil {

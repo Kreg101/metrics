@@ -19,6 +19,7 @@ func (m Metrics) String() string {
 		case "counter":
 			_, _ = sb.WriteString(fmt.Sprintf("%d", *v.Delta))
 		}
+		sb.WriteString(", ")
 	}
 	return sb.String()
 }
