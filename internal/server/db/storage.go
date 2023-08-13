@@ -122,12 +122,12 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			}
 		}
 	} else {
-		// для того чтобы не рассматривать много случаев
-		if m.Delta == nil {
-			m.Delta = new(int64)
-		} else {
-			m.Value = new(float64)
-		}
+		//// для того чтобы не рассматривать много случаев
+		//if m.Delta == nil {
+		//	m.Delta = new(int64)
+		//} else {
+		//	m.Value = new(float64)
+		//}
 
 		_, err = s.conn.ExecContext(ctx,
 			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
@@ -139,7 +139,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 		}
 
 		// возвращаем в исходный вид, где пустое поле - nil
-		m = normal(m)
+		//m = normal(m)
 	}
 }
 
@@ -150,7 +150,7 @@ func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
 	row := s.conn.QueryRowContext(ctx,
 		`SELECT * FROM metrics WHERE id = $1`, name)
 
-	err := row.Scan(&m.ID, &m.MType, m.Delta, m.Value)
+	err := row.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			s.log.Errorf("can't get existing value from data base: %e", err)
@@ -158,7 +158,8 @@ func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
 		return metric.Metric{}, false
 	}
 
-	return normal(m), true
+	//return normal(m), true
+	return m, true
 }
 
 // GetAll получает все метрики из базы данных и пытается иx преобразовать к metric.Metrics
@@ -177,13 +178,14 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 	for rows.Next() {
 		m := metric.Metric{Delta: new(int64), Value: new(float64)}
 
-		err = rows.Scan(&m.ID, &m.MType, m.Delta, m.Value)
+		err = rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 		if err != nil {
 			s.log.Errorf("can't get metric %s from data base: %e", m, err)
 			return nil
 		}
 
-		metrics[m.ID] = normal(m)
+		//metrics[m.ID] = normal(m)
+		metrics[m.ID] = m
 	}
 
 	err = rows.Err()
