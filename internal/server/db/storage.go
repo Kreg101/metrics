@@ -27,15 +27,7 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
 		s.log = logger.Default()
 	}
 
-	_, err := s.conn.ExecContext(context.Background(), `
-        CREATE TABLE IF NOT EXISTS metrics (
-            id VARCHAR(128) PRIMARY KEY,
-            mtype VARCHAR(30) NOT NULL,
-            delta BIGINT,
-            value DOUBLE PRECISION         
-        )
-    `)
-
+	err := s.sqlCreateTable()
 	if err != nil {
 		return Storage{}, err
 	}
@@ -48,20 +40,16 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
 func (s Storage) Add(ctx context.Context, m metric.Metric) {
 
 	// проверяем существование метрики в хранилище
-	row := s.conn.QueryRowContext(ctx,
-		`SELECT EXISTS (SELECT * FROM metrics WHERE id = $1 AND mtype = $2)`,
-		m.ID, m.MType)
-
-	var inStore bool
-	err := row.Scan(&inStore)
-
+	inStore, err := s.sqlElementExist(ctx, m)
 	if err != nil {
-		panic(err)
+		s.log.Errorf("can't check element's existing: %e", err)
+		return
 	}
 
 	if inStore {
 		switch m.MType {
 		case "counter":
+
 			// по ТЗ нам нужно вернуть обновленное значение метрики, поэтому после обновления
 			// вытаскиваем второй раз ее из хранилища. Чтобы эти операции происходили слитно и если что
 			// откатились, используем транзакции
@@ -73,53 +61,39 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			defer tx.Rollback()
 
 			// считываем предыдущее значение метрики
-			var prev int64
-			row := s.conn.QueryRowContext(ctx,
-				`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
-				m.ID, m.MType)
-
-			err = row.Scan(&prev)
+			prev, err := s.sqlGetDelta(ctx, m)
 			if err != nil {
-				s.log.Errorf("can't get metric value after update: %e", err)
+				s.log.Errorf("can't get delta metric from storage: %e", err)
 				return
 			}
 
 			// обновляем текущую
 			*m.Delta += prev
 
-			_, err = s.conn.ExecContext(ctx,
-				`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3`,
-				m.Delta, m.ID, m.MType)
-
+			// обновляем ее в бд
+			err = s.sqlUpdateDelta(ctx, m)
 			if err != nil {
-				s.log.Errorf("can't update counter metric: %s", err.Error())
+				s.log.Errorf("can't update delta metric: %e", err)
 				return
 			}
 
+			// завершаем транзакцию
 			err = tx.Commit()
 			if err != nil {
 				s.log.Errorf("can't commit transaction: %s", err.Error())
-				return
 			}
 
 		case "gauge":
-			_, err = s.conn.ExecContext(ctx,
-				`UPDATE metrics SET value = $1 WHERE id = $2 AND mtype = $3`,
-				m.Value, m.ID, m.MType)
 
+			err = s.sqlUpdateValue(ctx, m)
 			if err != nil {
-				s.log.Errorf("can't update existing metric %s: %e", m, err)
-				return
+				s.log.Errorf("can't update value metric: %e", err)
 			}
 		}
 	} else {
-		_, err = s.conn.ExecContext(ctx,
-			`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
-			m.ID, m.MType, m.Delta, m.Value)
-
+		err = s.sqlInsert(ctx, m)
 		if err != nil {
-			s.log.Errorf("can't add metric %s to storage: %e", m, err)
-			return
+			s.log.Errorf("can't insert metric into storage: %e", err)
 		}
 	}
 }
@@ -127,11 +101,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 // Get возвращает метрику из хранилища по имени и true, если она есть,
 // либо пустую метрику и false, если ее нет
 func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
-	m := metric.Metric{}
-	row := s.conn.QueryRowContext(ctx,
-		`SELECT * FROM metrics WHERE id = $1`, name)
-
-	err := row.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
+	m, err := s.sqlGetMetric(ctx, name)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			s.log.Errorf("can't get existing value from data base: %e", err)
@@ -145,8 +115,7 @@ func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
 // GetAll получает все метрики из базы данных и пытается иx преобразовать к metric.Metrics
 func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 	metrics := make(metric.Metrics, 0)
-	rows, err := s.conn.QueryContext(ctx,
-		`SELECT * FROM metrics`)
+	rows, err := s.conn.QueryContext(ctx, `SELECT * FROM metrics`)
 
 	if err != nil {
 		s.log.Errorf("can't get all elements from data base: %e", err)
@@ -185,4 +154,80 @@ func (s Storage) Ping(pctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s Storage) sqlCreateTable() error {
+	_, err := s.conn.ExecContext(context.Background(), `
+        CREATE TABLE IF NOT EXISTS metrics (
+            id VARCHAR(128) PRIMARY KEY,
+            mtype VARCHAR(30) NOT NULL,
+            delta BIGINT,
+            value DOUBLE PRECISION         
+        )
+    `)
+	return err
+}
+
+func (s Storage) sqlElementExist(ctx context.Context, m metric.Metric) (bool, error) {
+	row := s.conn.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT * FROM metrics WHERE id = $1 AND mtype = $2)`,
+		m.ID, m.MType)
+
+	var inStore bool
+	err := row.Scan(&inStore)
+
+	if err != nil {
+		return false, err
+	}
+
+	return inStore, nil
+}
+
+func (s Storage) sqlGetDelta(ctx context.Context, m metric.Metric) (int64, error) {
+	var prev int64
+	row := s.conn.QueryRowContext(ctx,
+		`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
+		m.ID, m.MType)
+
+	err := row.Scan(&prev)
+	if err != nil {
+		return 0, err
+	}
+	return prev, nil
+}
+
+func (s Storage) sqlUpdateDelta(ctx context.Context, m metric.Metric) error {
+	_, err := s.conn.ExecContext(ctx,
+		`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3`,
+		m.Delta, m.ID, m.MType)
+
+	return err
+}
+
+func (s Storage) sqlUpdateValue(ctx context.Context, m metric.Metric) error {
+	_, err := s.conn.ExecContext(ctx,
+		`UPDATE metrics SET value = $1 WHERE id = $2 AND mtype = $3`,
+		m.Value, m.ID, m.MType)
+
+	return err
+}
+
+func (s Storage) sqlInsert(ctx context.Context, m metric.Metric) error {
+	_, err := s.conn.ExecContext(ctx,
+		`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
+		m.ID, m.MType, m.Delta, m.Value)
+
+	return err
+}
+
+func (s Storage) sqlGetMetric(ctx context.Context, id string) (metric.Metric, error) {
+	m := metric.Metric{}
+	row := s.conn.QueryRowContext(ctx,
+		`SELECT * FROM metrics WHERE id = $1`, id)
+
+	err := row.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
+	if err != nil {
+		return metric.Metric{}, err 
+	}
+	return m, nil 
 }
