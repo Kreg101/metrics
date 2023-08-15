@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+// TODO я так и не понял, как тестировать бд. Прочитал, что нельзя передавать название таблицы в sql запрос.
+// Я же не буду все в основной таблице metrics делать. Ну и не дописал моки для тестирования интерефейся Repository
+// Этим буду заниматься
+
 // Storage структура для работы с базой данных. Содержит в себе соединение и логер.
 // Реализует интерфейс handler.Repository
 type Storage struct {
@@ -227,7 +231,7 @@ func (s Storage) sqlGetMetric(ctx context.Context, id string) (metric.Metric, er
 
 	err := row.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 	if err != nil {
-		return metric.Metric{}, err 
+		return metric.Metric{}, err
 	}
-	return m, nil 
+	return m, nil
 }
