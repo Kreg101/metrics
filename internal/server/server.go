@@ -10,8 +10,8 @@ type Server struct {
 	mux *handler.Mux
 }
 
-func NewServer(repository handler.Repository, log *zap.SugaredLogger) *Server {
-	return &Server{handler.NewMux(repository, log)}
+func NewServer(repository handler.Repository, log *zap.SugaredLogger, key string) *Server {
+	return &Server{handler.NewMux(repository, log, key)}
 }
 
 func (s *Server) Start(addr string) error {

@@ -179,6 +179,8 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("updates", m.ID, m.MType, *m.Delta, m.Value)
 		}
 
+		fmt.Println(m.ID, m.MType, m.Delta, m.Value)
+
 		mux.storage.Add(r.Context(), m)
 	}
 }

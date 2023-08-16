@@ -1,6 +1,10 @@
 package agent
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-resty/resty/v2"
@@ -13,16 +17,17 @@ type Agent struct {
 	updateFreq time.Duration
 	sendFreq   time.Duration
 	host       string
+	key        string
 	stats      runtime.MemStats
 }
 
-func NewAgent(update int, send int, host string) *Agent {
-	agent := &Agent{
+func NewAgent(update int, send int, host string, key string) *Agent {
+	return &Agent{
 		updateFreq: time.Duration(update) * time.Second,
 		sendFreq:   time.Duration(send) * time.Second,
 		host:       host,
+		key:        key,
 	}
-	return agent
 }
 
 func getMapOfStats(stats runtime.MemStats) map[string]float64 {
@@ -58,6 +63,22 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 	return res
 }
 
+func (a *Agent) hash(m []metric.Metric) (string, error) {
+	b, err := json.Marshal(m)
+	if err != nil {
+		return "", err
+	}
+
+	h := hmac.New(sha256.New, []byte(a.key))
+	h.Write(b)
+	src := h.Sum(nil)
+
+	dst := make([]byte, hex.EncodedLen(len(src)))
+
+	hex.Encode(dst, src)
+	return string(dst), nil
+}
+
 func (a *Agent) Start() {
 	client := resty.New()
 	var pollCount int64
@@ -75,13 +96,23 @@ func (a *Agent) Start() {
 			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount}
 			metrics = append(metrics, m)
 
-			_, err := client.R().SetBody(metrics).
+			r := client.R().SetBody(metrics).
 				SetHeader("Content-Type", "application/json").
-				SetHeader("Accept-Encoding", "gzip").
-				Post(a.host + "/updates/")
+				SetHeader("Accept-Encoding", "gzip")
+
+			if a.key != "" {
+				hash, err := a.hash(metrics)
+				if err != nil {
+					fmt.Printf("can't get hash %v\n", err)
+				} else {
+					r.SetHeader("HashSHA256", hash)
+				}
+			}
+
+			_, err := r.Post(a.host + "/updates/")
 
 			if err != nil {
-				fmt.Printf("can't get correct response from server: %e", err)
+				fmt.Printf("can't get correct response from server: %v\n", err)
 			}
 		}
 	}()
