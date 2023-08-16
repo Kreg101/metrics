@@ -1,9 +1,9 @@
-package storage
+package inmemstore
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/Kreg101/metrics/internal/metric"
 	"io"
 	"os"
@@ -39,10 +39,13 @@ type Filer struct {
 	decoder *json.Decoder
 }
 
+// writeMetric записывает струтуру в формате json
 func (f Filer) writeMetric(m *metric.Metric) error {
 	return f.encoder.Encode(&m)
 }
 
+// readMetric считывавет в формате json одну единственную метрику
+// и мапит ее в структуру
 func (f Filer) readMetric() (*metric.Metric, error) {
 	event := &metric.Metric{}
 	if err := f.decoder.Decode(&event); err != nil {
@@ -77,15 +80,14 @@ func (f Filer) load() (metric.Metrics, error) {
 	return s, nil
 }
 
-// Write записывает в файл содержимое хранилища, предварительно очистив файл
-func (s *Storage) Write() {
+// Write переносит в файл все содержимое хранилища, предварительно очистив файл
+func (s *InMemStorage) Write() {
 	if err := os.Truncate(s.filer.file.Name(), 0); err != nil {
 		s.log.Errorf("failed to truncate: %v", err)
 		return
 	}
 
-	for _, m := range s.GetAll() {
-		fmt.Println(m)
+	for _, m := range s.GetAll(context.Background()) {
 		err := s.filer.writeMetric(&m)
 		if err != nil {
 			s.log.Errorf("can't add metric %v to file: %s", m, err)

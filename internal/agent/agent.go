@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-resty/resty/v2"
 	"math/rand"
 	"runtime"
@@ -24,8 +25,8 @@ func NewAgent(update int, send int, host string) *Agent {
 	return agent
 }
 
-func getMapOfStats(stats *runtime.MemStats) map[string]float64 {
-	res := make(map[string]float64)
+func getMapOfStats(stats runtime.MemStats) map[string]float64 {
+	res := make(map[string]float64, 0)
 	res["Alloc"] = float64(stats.Alloc)
 	res["BuckHashSys"] = float64(stats.BuckHashSys)
 	res["Frees"] = float64(stats.Frees)
@@ -63,23 +64,25 @@ func (a *Agent) Start() {
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
-			for k, v := range getMapOfStats(&a.stats) {
-				url := a.host + "/update/gauge/" + k + "/" + fmt.Sprintf("%f", v)
-				go func(url string, client *resty.Client) {
-					_, err := client.R().Post(url)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}(url, client)
+			var metrics []metric.Metric
+
+			for k, v := range getMapOfStats(a.stats) {
+				m := metric.Metric{ID: k, MType: "gauge", Value: new(float64)}
+				*m.Value = v
+				metrics = append(metrics, m)
 			}
 
-			url := a.host + "/update/counter/PollCount/" + fmt.Sprintf("%d", pollCount)
-			go func(url string, client *resty.Client) {
-				_, err := client.R().Post(url)
-				if err != nil {
-					fmt.Println(err)
-				}
-			}(url, client)
+			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount}
+			metrics = append(metrics, m)
+
+			_, err := client.R().SetBody(metrics).
+				SetHeader("Content-Type", "application/json").
+				SetHeader("Accept-Encoding", "gzip").
+				Post(a.host + "/updates/")
+
+			if err != nil {
+				fmt.Printf("can't get correct response from server: %e", err)
+			}
 		}
 	}()
 

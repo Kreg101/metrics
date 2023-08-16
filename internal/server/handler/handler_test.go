@@ -5,8 +5,8 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/server/inmemstore"
 	"github.com/Kreg101/metrics/internal/server/logger"
-	"github.com/Kreg101/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -22,14 +22,14 @@ func TestNewMux(t *testing.T) {
 		expected *Mux
 	}{
 		{
-			name:     "nil storage",
+			name:     "nil inmemstore",
 			param:    nil,
 			expected: &Mux{storage: nil, log: logger.Default()},
 		},
 		{
-			name:     "default storage",
-			param:    &storage.Storage{},
-			expected: &Mux{storage: &storage.Storage{}, log: logger.Default()},
+			name:     "default inmemstore",
+			param:    &inmemstore.InMemStorage{},
+			expected: &Mux{storage: &inmemstore.InMemStorage{}, log: logger.Default()},
 		},
 	}
 	for _, tc := range tt {
@@ -92,7 +92,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body *m
 func TestMux_Router(t *testing.T) {
 	counter := int64(10)
 	gauge := 1.2345
-	s, err := storage.NewStorage("", 0, false, nil)
+	s, err := inmemstore.NewInMemStorage("", 0, false, nil)
 	require.NoError(t, err)
 
 	mux := NewMux(s, nil)
@@ -181,7 +181,7 @@ func TestMux_Router(t *testing.T) {
 			want:   response{http.StatusNotFound, "", ""},
 		},
 		{
-			name:   "no metric in storage",
+			name:   "no metric in inmemstore",
 			url:    "/value/counter/z",
 			method: http.MethodGet,
 			body:   nil,
@@ -228,7 +228,7 @@ func TestMux_Router(t *testing.T) {
 				"{\"id\":\"key\",\"type\":\"gauge\",\"value\":1.2345}\n"},
 		},
 		{
-			name:   "no metric in storage",
+			name:   "no metric in inmemstore",
 			url:    "/value/",
 			method: http.MethodPost,
 			body:   &metric.Metric{ID: "ke", MType: "gauge"},

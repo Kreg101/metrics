@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/go-chi/chi/v5"
@@ -8,9 +9,10 @@ import (
 )
 
 type Repository interface {
-	Add(metric.Metric)
-	GetAll() metric.Metrics
-	Get(name string) (metric.Metric, bool)
+	Add(ctx context.Context, m metric.Metric)
+	Get(ctx context.Context, name string) (metric.Metric, bool)
+	GetAll(ctx context.Context) metric.Metrics
+	Ping(ctx context.Context) error
 }
 
 type Mux struct {
@@ -19,8 +21,7 @@ type Mux struct {
 }
 
 func NewMux(storage Repository, log *zap.SugaredLogger) *Mux {
-	mux := &Mux{}
-	mux.storage = storage
+	mux := &Mux{storage: storage}
 
 	if log == nil {
 		mux.log = logger.Default()
@@ -35,9 +36,11 @@ func NewMux(storage Repository, log *zap.SugaredLogger) *Mux {
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
 	router.Get("/", logging(compression(mux.mainPage)))
+	router.Get("/ping", mux.ping)
 	router.Get("/value/{type}/{name}", logging(compression(mux.metricPage)))
 	router.Post("/update/{type}/{name}/{value}", logging(compression(mux.updateMetric)))
 	router.Post("/update/", logging(compression(mux.updateMetricWithBody)))
 	router.Post("/value/", logging(compression(mux.getMetric)))
+	router.Post("/updates/", logging(compression(mux.updates)))
 	return router
 }

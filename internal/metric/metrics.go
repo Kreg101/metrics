@@ -9,16 +9,17 @@ import (
 type Metrics map[string]Metric
 
 func (m Metrics) String() string {
-	list := make([]string, 0)
+	sb := strings.Builder{}
 	for k, v := range m {
-		var keyValue = k + ":"
+		sb.WriteString(k)
+		sb.WriteString(":")
 		switch v.MType {
 		case "gauge":
-			keyValue += algorithms.Float2String(*v.Value)
+			_, _ = sb.WriteString(algorithms.Float2String(*v.Value))
 		case "counter":
-			keyValue += fmt.Sprintf("%d", *v.Delta)
+			_, _ = sb.WriteString(fmt.Sprintf("%d", *v.Delta))
 		}
-		list = append(list, keyValue)
+		sb.WriteString(" ")
 	}
-	return strings.Join(list, ", ")
+	return sb.String()
 }

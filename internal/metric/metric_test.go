@@ -18,12 +18,12 @@ func TestMetric_String(t *testing.T) {
 		{
 			name:   "single counter metric",
 			source: Metrics{"x": counter},
-			want:   "x:10",
+			want:   "x:10 ",
 		},
 		{
 			name:   "single gauge metric",
 			source: Metrics{"x": gauge},
-			want:   "x:123.4",
+			want:   "x:123.4 ",
 		},
 	}
 	for _, tc := range tt {
@@ -48,12 +48,12 @@ func TestMetrics_String(t *testing.T) {
 		{
 			name:   "single counter metric",
 			source: Metrics{"x": counter},
-			want:   "x:10",
+			want:   "x:10 ",
 		},
 		{
 			name:   "single gauge metric",
 			source: Metrics{"x": gauge},
-			want:   "x:123.4",
+			want:   "x:123.4 ",
 		},
 	}
 	for _, tc := range tt {
