@@ -15,6 +15,7 @@ type Repository interface {
 	Ping(ctx context.Context) error
 }
 
+// Mux - структура для соединение http запроса и хранилища
 type Mux struct {
 	storage Repository
 	log     *zap.SugaredLogger
