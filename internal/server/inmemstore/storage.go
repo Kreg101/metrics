@@ -88,7 +88,7 @@ func (s *InMemStorage) Add(ctx context.Context, m metric.Metric) {
 	if s.syncWritingToFile {
 		err := s.filer.writeMetric(&m)
 		if err != nil {
-			s.log.Errorf("can't add metric %v to file: %e", &m, err)
+			s.log.Errorf("can't add metric %v to file: %v", m, err)
 		}
 	}
 }
