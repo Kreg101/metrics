@@ -65,7 +65,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			defer tx.Rollback()
 
 			// считываем предыдущее значение метрики
-			prev, err := s.sqlGetDelta(ctx, m)
+			prev, err := sqlGetDelta(ctx, m, tx)
 			if err != nil {
 				s.log.Errorf("can't get delta metric from storage: %e", err)
 				return
@@ -75,7 +75,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			*m.Delta += prev
 
 			// обновляем ее в бд
-			err = s.sqlUpdateDelta(ctx, m)
+			err = sqlUpdateDelta(ctx, m, tx)
 			if err != nil {
 				s.log.Errorf("can't update delta metric: %e", err)
 				return
@@ -187,9 +187,9 @@ func (s Storage) sqlElementExist(ctx context.Context, m metric.Metric) (bool, er
 	return inStore, nil
 }
 
-func (s Storage) sqlGetDelta(ctx context.Context, m metric.Metric) (int64, error) {
+func sqlGetDelta(ctx context.Context, m metric.Metric, tx *sql.Tx) (int64, error) {
 	var prev int64
-	row := s.conn.QueryRowContext(ctx,
+	row := tx.QueryRowContext(ctx,
 		`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
 		m.ID, m.MType)
 
@@ -200,8 +200,8 @@ func (s Storage) sqlGetDelta(ctx context.Context, m metric.Metric) (int64, error
 	return prev, nil
 }
 
-func (s Storage) sqlUpdateDelta(ctx context.Context, m metric.Metric) error {
-	_, err := s.conn.ExecContext(ctx,
+func sqlUpdateDelta(ctx context.Context, m metric.Metric, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx,
 		`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3`,
 		m.Delta, m.ID, m.MType)
 
