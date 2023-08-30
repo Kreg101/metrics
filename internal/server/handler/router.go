@@ -15,12 +15,14 @@ type Repository interface {
 	Ping(ctx context.Context) error
 }
 
+// Mux - структура для соединение http запроса и хранилища
 type Mux struct {
 	storage Repository
 	log     *zap.SugaredLogger
+	key     string
 }
 
-func NewMux(storage Repository, log *zap.SugaredLogger) *Mux {
+func NewMux(storage Repository, log *zap.SugaredLogger, key string) *Mux {
 	mux := &Mux{storage: storage}
 
 	if log == nil {
@@ -28,6 +30,8 @@ func NewMux(storage Repository, log *zap.SugaredLogger) *Mux {
 	} else {
 		mux.log = log
 	}
+
+	mux.key = key
 
 	return mux
 }
@@ -39,8 +43,8 @@ func (mux *Mux) Router() chi.Router {
 	router.Get("/ping", mux.ping)
 	router.Get("/value/{type}/{name}", logging(compression(mux.metricPage)))
 	router.Post("/update/{type}/{name}/{value}", logging(compression(mux.updateMetric)))
-	router.Post("/update/", logging(compression(mux.updateMetricWithBody)))
-	router.Post("/value/", logging(compression(mux.getMetric)))
-	router.Post("/updates/", logging(compression(mux.updates)))
+	router.Post("/update/", mux.check(logging(compression(mux.updateMetricWithBody))))
+	router.Post("/value/", mux.check(logging(compression(mux.getMetric))))
+	router.Post("/updates/", mux.check(logging(compression(mux.updates))))
 	return router
 }

@@ -11,6 +11,7 @@ var (
 	endpoint      string
 	storagePath   string
 	databaseDSN   string
+	key           string
 	storeInterval int
 	restore       bool
 	useDB         bool
@@ -20,6 +21,7 @@ func parseConfiguration() {
 	flag.StringVar(&endpoint, "a", ":8080", "address and port to run server")
 	flag.StringVar(&storagePath, "f", "/tmp/metrics-db.json", "file to store metrics")
 	flag.StringVar(&databaseDSN, "d", "", "string for database connection")
+	flag.StringVar(&key, "k", "", "key for hash")
 	flag.IntVar(&storeInterval, "i", 10, "interval for saving data on disk")
 	flag.BoolVar(&restore, "r", true, "load metrics from file")
 	flag.Parse()
@@ -34,6 +36,10 @@ func parseConfiguration() {
 
 	if envDataBaseDSN := os.Getenv("DATABASE_DSN"); envDataBaseDSN != "" {
 		databaseDSN = envDataBaseDSN
+	}
+
+	if envKey := os.Getenv("KEY"); envKey != "" {
+		key = envKey
 	}
 
 	if envStoreInterval := os.Getenv("STORE_INTERVAL"); envStoreInterval != "" {

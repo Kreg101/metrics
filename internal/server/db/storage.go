@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-// TODO я так и не понял, как тестировать бд. Прочитал, что нельзя передавать название таблицы в sql запрос.
-// Я же не буду все в основной таблице metrics делать. Ну и не дописал моки для тестирования интерефейся Repository
-// Этим буду заниматься
-
 // Storage структура для работы с базой данных. Содержит в себе соединение и логер.
 // Реализует интерфейс handler.Repository
 type Storage struct {
@@ -46,7 +42,7 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 	// проверяем существование метрики в хранилище
 	inStore, err := s.sqlElementExist(ctx, m)
 	if err != nil {
-		s.log.Errorf("can't check element's existing: %e", err)
+		s.log.Errorf("can't check element's existing: %v", err)
 		return
 	}
 
@@ -59,15 +55,15 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			// откатились, используем транзакции
 			tx, err := s.conn.BeginTx(ctx, nil)
 			if err != nil {
-				s.log.Errorf("can't use transaction: %e", err)
+				s.log.Errorf("can't use transaction: %v", err)
 				return
 			}
 			defer tx.Rollback()
 
 			// считываем предыдущее значение метрики
-			prev, err := s.sqlGetDelta(ctx, m)
+			prev, err := sqlGetDelta(ctx, m, tx)
 			if err != nil {
-				s.log.Errorf("can't get delta metric from storage: %e", err)
+				s.log.Errorf("can't get delta metric from storage: %v", err)
 				return
 			}
 
@@ -75,29 +71,29 @@ func (s Storage) Add(ctx context.Context, m metric.Metric) {
 			*m.Delta += prev
 
 			// обновляем ее в бд
-			err = s.sqlUpdateDelta(ctx, m)
+			err = sqlUpdateDelta(ctx, m, tx)
 			if err != nil {
-				s.log.Errorf("can't update delta metric: %e", err)
+				s.log.Errorf("can't update delta metric: %v", err)
 				return
 			}
 
 			// завершаем транзакцию
 			err = tx.Commit()
 			if err != nil {
-				s.log.Errorf("can't commit transaction: %s", err.Error())
+				s.log.Errorf("can't commit transaction: %v", err)
 			}
 
 		case "gauge":
 
 			err = s.sqlUpdateValue(ctx, m)
 			if err != nil {
-				s.log.Errorf("can't update value metric: %e", err)
+				s.log.Errorf("can't update value metric: %v", err)
 			}
 		}
 	} else {
 		err = s.sqlInsert(ctx, m)
 		if err != nil {
-			s.log.Errorf("can't insert metric into storage: %e", err)
+			s.log.Errorf("can't insert metric into storage: %v", err)
 		}
 	}
 }
@@ -108,7 +104,7 @@ func (s Storage) Get(ctx context.Context, name string) (metric.Metric, bool) {
 	m, err := s.sqlGetMetric(ctx, name)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			s.log.Errorf("can't get existing value from data base: %e", err)
+			s.log.Errorf("can't get existing value from data base: %v", err)
 		}
 		return metric.Metric{}, false
 	}
@@ -122,7 +118,7 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 	rows, err := s.conn.QueryContext(ctx, `SELECT * FROM metrics`)
 
 	if err != nil {
-		s.log.Errorf("can't get all elements from data base: %e", err)
+		s.log.Errorf("can't get all elements from data base: %v", err)
 		return nil
 	}
 	defer rows.Close()
@@ -133,7 +129,7 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 
 		err = rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value)
 		if err != nil {
-			s.log.Errorf("can't get metric %s from data base: %e", m, err)
+			s.log.Errorf("can't get metric %s from data base: %v", m, err)
 			return nil
 		}
 
@@ -142,7 +138,7 @@ func (s Storage) GetAll(ctx context.Context) metric.Metrics {
 
 	err = rows.Err()
 	if err != nil {
-		s.log.Errorf("can't parse metrics from rows: %e", err)
+		s.log.Errorf("can't parse metrics from rows: %v", err)
 		return nil
 	}
 
@@ -187,9 +183,9 @@ func (s Storage) sqlElementExist(ctx context.Context, m metric.Metric) (bool, er
 	return inStore, nil
 }
 
-func (s Storage) sqlGetDelta(ctx context.Context, m metric.Metric) (int64, error) {
+func sqlGetDelta(ctx context.Context, m metric.Metric, tx *sql.Tx) (int64, error) {
 	var prev int64
-	row := s.conn.QueryRowContext(ctx,
+	row := tx.QueryRowContext(ctx,
 		`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
 		m.ID, m.MType)
 
@@ -200,8 +196,8 @@ func (s Storage) sqlGetDelta(ctx context.Context, m metric.Metric) (int64, error
 	return prev, nil
 }
 
-func (s Storage) sqlUpdateDelta(ctx context.Context, m metric.Metric) error {
-	_, err := s.conn.ExecContext(ctx,
+func sqlUpdateDelta(ctx context.Context, m metric.Metric, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx,
 		`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3`,
 		m.Delta, m.ID, m.MType)
 

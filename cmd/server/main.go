@@ -17,7 +17,7 @@ func main() {
 		panic(err)
 	}
 
-	s := server.NewServer(repository, log)
+	s := server.NewServer(repository, log, key)
 	err = s.Start(endpoint)
 	if err != nil {
 		panic(err)
