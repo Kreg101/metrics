@@ -18,6 +18,7 @@ var (
 )
 
 func parseConfiguration() {
+
 	flag.StringVar(&endpoint, "a", ":8080", "address and port to run server")
 	flag.StringVar(&storagePath, "f", "/tmp/metrics-db.json", "file to store metrics")
 	flag.StringVar(&databaseDSN, "d", "", "string for database connection")
