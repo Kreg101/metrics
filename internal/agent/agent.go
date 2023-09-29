@@ -31,11 +31,11 @@ func NewAgent(update int, send int, host string, key string) *Agent {
 }
 
 func getMapOfStats(stats runtime.MemStats) map[string]float64 {
-	res := make(map[string]float64, 0)
+	res := make(map[string]float64)
 	res["Alloc"] = float64(stats.Alloc)
 	res["BuckHashSys"] = float64(stats.BuckHashSys)
 	res["Frees"] = float64(stats.Frees)
-	res["GCCPUFraction"] = float64(stats.GCCPUFraction)
+	res["GCCPUFraction"] = stats.GCCPUFraction
 	res["GCSys"] = float64(stats.GCSys)
 	res["HeapAlloc"] = float64(stats.HeapAlloc)
 	res["HeapIdle"] = float64(stats.HeapIdle)
