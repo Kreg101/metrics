@@ -2,7 +2,7 @@ package inmemstore
 
 import (
 	"context"
-	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/entity"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +43,7 @@ func TestNewInMemStorage(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.want.metrics = metric.Metrics{}
+			tc.want.metrics = entity.Metrics{}
 			s, err := NewInMemStorage(tc.param.path,
 				tc.param.storeInterval,
 				tc.param.loadFromFile,
@@ -60,46 +60,46 @@ func TestInMemStorage_Add(t *testing.T) {
 	x := int64(10)
 	z := int64(20)
 	y := 123.4
-	counter := metric.Metric{ID: "key", MType: "counter", Delta: &x}
-	gauge := metric.Metric{ID: "key", MType: "gauge", Value: &y}
-	n := metric.Metric{ID: "new", MType: "counter", Delta: &x}
-	result1 := metric.Metric{ID: "key", MType: "counter", Delta: &z}
-	result2 := metric.Metric{ID: "key", MType: "gauge", Value: &y}
+	counter := entity.Metric{ID: "key", MType: "counter", Delta: &x}
+	gauge := entity.Metric{ID: "key", MType: "gauge", Value: &y}
+	n := entity.Metric{ID: "new", MType: "counter", Delta: &x}
+	result1 := entity.Metric{ID: "key", MType: "counter", Delta: &z}
+	result2 := entity.Metric{ID: "key", MType: "gauge", Value: &y}
 	tt := []struct {
 		name     string
-		value    metric.Metric
+		value    entity.Metric
 		base     *InMemStorage
 		expected *InMemStorage
 	}{
 		{
 			name:     "add counter to empty",
 			value:    counter,
-			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: metric.Metrics{}},
-			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": counter}},
+			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: entity.Metrics{}},
+			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": counter}},
 		},
 		{
 			name:     "add gauge to empty",
 			value:    gauge,
-			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: metric.Metrics{}},
-			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": gauge}},
+			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: entity.Metrics{}},
+			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": gauge}},
 		},
 		{
 			name:     "add counter to something",
 			value:    counter,
-			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": counter}},
-			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": result1}},
+			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": counter}},
+			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": result1}},
 		},
 		{
 			name:     "add counter to something",
 			value:    gauge,
-			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": gauge}},
-			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": result2}},
+			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": gauge}},
+			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": result2}},
 		},
 		{
 			name:     "add new",
 			value:    n,
-			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": gauge}},
-			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]metric.Metric{"key": gauge, "new": n}},
+			base:     &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": gauge}},
+			expected: &InMemStorage{mutex: &sync.RWMutex{}, metrics: map[string]entity.Metric{"key": gauge, "new": n}},
 		},
 	}
 	for _, tc := range tt {
@@ -112,34 +112,34 @@ func TestInMemStorage_Add(t *testing.T) {
 
 func TestInMemStorage_Get(t *testing.T) {
 	x := int64(10)
-	counter1 := metric.Metric{ID: "c1", MType: "counter", Delta: &x}
+	counter1 := entity.Metric{ID: "c1", MType: "counter", Delta: &x}
 
 	tt := []struct {
 		name   string
-		source metric.Metrics
+		source entity.Metrics
 		key    string
-		value  metric.Metric
+		value  entity.Metric
 		ok     bool
 	}{
 		{
 			name:   "value in inmemstore",
-			source: metric.Metrics{"c1": counter1},
+			source: entity.Metrics{"c1": counter1},
 			key:    "c1",
 			value:  counter1,
 			ok:     true,
 		},
 		{
 			name:   "value is not in inmemstore",
-			source: metric.Metrics{"c1": counter1},
+			source: entity.Metrics{"c1": counter1},
 			key:    "x",
-			value:  metric.Metric{},
+			value:  entity.Metric{},
 			ok:     false,
 		},
 		{
 			name:   "empty inmemstore",
-			source: metric.Metrics{},
+			source: entity.Metrics{},
 			key:    "x",
-			value:  metric.Metric{},
+			value:  entity.Metric{},
 			ok:     false,
 		},
 	}
@@ -156,22 +156,22 @@ func TestInMemStorage_Get(t *testing.T) {
 func TestInMemStorage_GetAll(t *testing.T) {
 	x := int64(10)
 	y := 1.23
-	counter := metric.Metric{ID: "c", MType: "counter", Delta: &x}
-	gauge := metric.Metric{ID: "g", MType: "gauge", Value: &y}
+	counter := entity.Metric{ID: "c", MType: "counter", Delta: &x}
+	gauge := entity.Metric{ID: "g", MType: "gauge", Value: &y}
 	tt := []struct {
 		name string
 		s    *InMemStorage
-		want metric.Metrics
+		want entity.Metrics
 	}{
 		{
 			name: "empty inmemstore",
-			s:    &InMemStorage{metrics: metric.Metrics{}, mutex: &sync.RWMutex{}},
-			want: metric.Metrics{},
+			s:    &InMemStorage{metrics: entity.Metrics{}, mutex: &sync.RWMutex{}},
+			want: entity.Metrics{},
 		},
 		{
 			name: "not empty inmemstore",
-			s:    &InMemStorage{metrics: metric.Metrics{"c": counter, "g": gauge}, mutex: &sync.RWMutex{}},
-			want: metric.Metrics{"c": counter, "g": gauge},
+			s:    &InMemStorage{metrics: entity.Metrics{"c": counter, "g": gauge}, mutex: &sync.RWMutex{}},
+			want: entity.Metrics{"c": counter, "g": gauge},
 		},
 	}
 	for _, tc := range tt {

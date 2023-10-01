@@ -2,16 +2,16 @@ package handler
 
 import (
 	"context"
-	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/entity"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
 type Repository interface {
-	Add(ctx context.Context, m metric.Metric)
-	Get(ctx context.Context, name string) (metric.Metric, bool)
-	GetAll(ctx context.Context) metric.Metrics
+	Add(ctx context.Context, m entity.Metric)
+	Get(ctx context.Context, name string) (entity.Metric, bool)
+	GetAll(ctx context.Context) entity.Metrics
 	Ping(ctx context.Context) error
 }
 

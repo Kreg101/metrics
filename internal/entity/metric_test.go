@@ -1,4 +1,4 @@
-package metric
+package entity
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -16,12 +16,12 @@ func TestMetric_String(t *testing.T) {
 		want   string
 	}{
 		{
-			name:   "single counter metric",
+			name:   "single counter entity",
 			source: Metrics{"x": counter},
 			want:   "x:10 ",
 		},
 		{
-			name:   "single gauge metric",
+			name:   "single gauge entity",
 			source: Metrics{"x": gauge},
 			want:   "x:123.4 ",
 		},
@@ -46,12 +46,12 @@ func TestMetrics_String(t *testing.T) {
 		want   string
 	}{
 		{
-			name:   "single counter metric",
+			name:   "single counter entity",
 			source: Metrics{"x": counter},
 			want:   "x:10 ",
 		},
 		{
-			name:   "single gauge metric",
+			name:   "single gauge entity",
 			source: Metrics{"x": gauge},
 			want:   "x:123.4 ",
 		},

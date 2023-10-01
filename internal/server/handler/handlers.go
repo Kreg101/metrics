@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/entity"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -27,7 +27,7 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mux.log.Infof("no metric %s and type %s in inmemstore", name, mType)
+	mux.log.Infof("no entity %s and type %s in inmemstore", name, mType)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -35,7 +35,7 @@ func (mux *Mux) metricPage(w http.ResponseWriter, r *http.Request) {
 func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 	if chi.URLParam(r, "name") == "" {
 		w.WriteHeader(http.StatusNotFound)
-		mux.log.Errorf("empty metric name")
+		mux.log.Errorf("empty entity name")
 		return
 	}
 
@@ -48,7 +48,7 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		mux.storage.Add(r.Context(), metric.Metric{
+		mux.storage.Add(r.Context(), entity.Metric{
 			ID:    chi.URLParam(r, "name"),
 			MType: "gauge",
 			Value: &res,
@@ -63,7 +63,7 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		mux.storage.Add(r.Context(), metric.Metric{
+		mux.storage.Add(r.Context(), entity.Metric{
 			ID:    chi.URLParam(r, "name"),
 			MType: "counter",
 			Value: nil,
@@ -72,13 +72,13 @@ func (mux *Mux) updateMetric(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		w.WriteHeader(http.StatusBadRequest)
-		mux.log.Infof("wrong metric type: %s", chi.URLParam(r, "type"))
+		mux.log.Infof("wrong entity type: %s", chi.URLParam(r, "type"))
 	}
 }
 
 // updateMetricsWithBody в формате json передается метрика, проверяется ее корректность и возвращается она же обновленная
 func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
-	var m metric.Metric
+	var m entity.Metric
 
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
@@ -114,7 +114,7 @@ func (mux *Mux) updateMetricWithBody(w http.ResponseWriter, r *http.Request) {
 // getMetric вернет метрику и StatusOk, если метрика с указанным именем и типом существует в хранилище
 // иначе вернет StatusNotFound
 func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
-	var m metric.Metric
+	var m entity.Metric
 
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
@@ -127,7 +127,7 @@ func (mux *Mux) getMetric(w http.ResponseWriter, r *http.Request) {
 		m = v
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		mux.log.Infof("no %s metric in storage", m.ID)
+		mux.log.Infof("no %s entity in storage", m.ID)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (mux *Mux) ping(w http.ResponseWriter, r *http.Request) {
 
 // updates позволяет обновлять хранилище не 1 метрикой, а целым батчем
 func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
-	var metrics []metric.Metric
+	var metrics []entity.Metric
 
 	err := json.NewDecoder(r.Body).Decode(&metrics)
 	if err != nil {

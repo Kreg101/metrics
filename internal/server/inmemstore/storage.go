@@ -3,7 +3,7 @@ package inmemstore
 import (
 	"context"
 	"encoding/json"
-	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/entity"
 	"github.com/Kreg101/metrics/internal/server/logger"
 	"go.uber.org/zap"
 	"os"
@@ -14,7 +14,7 @@ import (
 // InMemStorage имплементирует интерфейс Repository, поэтому может быть использован
 // как хранилище метрик
 type InMemStorage struct {
-	metrics           metric.Metrics
+	metrics           entity.Metrics
 	mutex             *sync.RWMutex
 	log               *zap.SugaredLogger
 	filer             Filer
@@ -27,7 +27,7 @@ func NewInMemStorage(path string, storeInterval int,
 	loadFromFile bool, log *zap.SugaredLogger) (*InMemStorage, error) {
 
 	storage := &InMemStorage{}
-	storage.metrics = metric.Metrics{}
+	storage.metrics = entity.Metrics{}
 	storage.mutex = &sync.RWMutex{}
 
 	// инициализируем логер, если он не передан, то используем дефолтный
@@ -75,8 +75,8 @@ func NewInMemStorage(path string, storeInterval int,
 	return storage, nil
 }
 
-// Add (add metric to inmemstore)
-func (s *InMemStorage) Add(ctx context.Context, m metric.Metric) {
+// Add (add entity to inmemstore)
+func (s *InMemStorage) Add(ctx context.Context, m entity.Metric) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if m.MType == "counter" {
@@ -88,25 +88,25 @@ func (s *InMemStorage) Add(ctx context.Context, m metric.Metric) {
 	if s.syncWritingToFile {
 		err := s.filer.writeMetric(&m)
 		if err != nil {
-			s.log.Errorf("can't add metric %v to file: %v", m, err)
+			s.log.Errorf("can't add entity %v to file: %v", m, err)
 		}
 	}
 }
 
 // Get return an element, true if it exists in map or nil, false if it's not
-func (s *InMemStorage) Get(ctx context.Context, name string) (metric.Metric, bool) {
+func (s *InMemStorage) Get(ctx context.Context, name string) (entity.Metric, bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if v, ok := s.metrics[name]; ok {
 		return v, ok
 	}
-	return metric.Metric{}, false
+	return entity.Metric{}, false
 }
 
 // GetAll returns all metrics from inmemstore
-func (s *InMemStorage) GetAll(ctx context.Context) metric.Metrics {
+func (s *InMemStorage) GetAll(ctx context.Context) entity.Metrics {
 	s.mutex.RLock()
-	duplicate := make(metric.Metrics, len(s.metrics))
+	duplicate := make(entity.Metrics, len(s.metrics))
 	for k, v := range s.metrics {
 		duplicate[k] = v
 	}
