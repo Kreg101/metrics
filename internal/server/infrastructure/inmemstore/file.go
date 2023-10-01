@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/Kreg101/metrics/internal/metric"
+	"github.com/Kreg101/metrics/internal/server/entity"
 	"io"
 	"os"
 )
@@ -40,14 +40,14 @@ type Filer struct {
 }
 
 // writeMetric записывает струтуру в формате json
-func (f Filer) writeMetric(m *metric.Metric) error {
+func (f Filer) writeMetric(m *entity.Metric) error {
 	return f.encoder.Encode(&m)
 }
 
 // readMetric считывавет в формате json одну единственную метрику
 // и мапит ее в структуру
-func (f Filer) readMetric() (*metric.Metric, error) {
-	event := &metric.Metric{}
+func (f Filer) readMetric() (*entity.Metric, error) {
+	event := &entity.Metric{}
 	if err := f.decoder.Decode(&event); err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func (f Filer) readMetric() (*metric.Metric, error) {
 }
 
 // LoadFile - предварительная загрузка из файла
-func (f Filer) load() (metric.Metrics, error) {
-	s := metric.Metrics{}
+func (f Filer) load() (entity.Metrics, error) {
+	s := entity.Metrics{}
 	help, err := os.Open(f.file.Name())
 
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *InMemStorage) Write() {
 	for _, m := range s.GetAll(context.Background()) {
 		err := s.filer.writeMetric(&m)
 		if err != nil {
-			s.log.Errorf("can't add metric %v to file: %s", m, err)
+			s.log.Errorf("can't add entity %v to file: %s", m, err)
 		}
 	}
 }

@@ -2,13 +2,13 @@ package main
 
 import (
 	"database/sql"
-	"github.com/Kreg101/metrics/internal/server/db"
-	"github.com/Kreg101/metrics/internal/server/handler"
-	"github.com/Kreg101/metrics/internal/server/inmemstore"
+	"github.com/Kreg101/metrics/internal/server/infrastructure/db"
+	"github.com/Kreg101/metrics/internal/server/infrastructure/inmemstore"
+	"github.com/Kreg101/metrics/internal/server/transport"
 	"go.uber.org/zap"
 )
 
-func repInit(log *zap.SugaredLogger) (handler.Repository, error) {
+func repInit(log *zap.SugaredLogger) (transport.Repository, error) {
 	if useDB {
 		conn, err := sql.Open("pgx", databaseDSN)
 		if err != nil {

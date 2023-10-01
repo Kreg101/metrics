@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/Kreg101/metrics/internal/metric"
 	"github.com/go-resty/resty/v2"
 	"math/rand"
 	"runtime"
@@ -31,11 +30,11 @@ func NewAgent(update int, send int, host string, key string) *Agent {
 }
 
 func getMapOfStats(stats runtime.MemStats) map[string]float64 {
-	res := make(map[string]float64, 0)
+	res := make(map[string]float64)
 	res["Alloc"] = float64(stats.Alloc)
 	res["BuckHashSys"] = float64(stats.BuckHashSys)
 	res["Frees"] = float64(stats.Frees)
-	res["GCCPUFraction"] = float64(stats.GCCPUFraction)
+	res["GCCPUFraction"] = stats.GCCPUFraction
 	res["GCSys"] = float64(stats.GCSys)
 	res["HeapAlloc"] = float64(stats.HeapAlloc)
 	res["HeapIdle"] = float64(stats.HeapIdle)
@@ -63,7 +62,7 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 	return res
 }
 
-func (a *Agent) hash(m []metric.Metric) (string, error) {
+func (a *Agent) hash(m []Metric) (string, error) {
 	b, err := json.Marshal(m)
 	if err != nil {
 		return "", err
@@ -85,15 +84,15 @@ func (a *Agent) Start() {
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
-			var metrics []metric.Metric
+			var metrics []Metric
 
 			for k, v := range getMapOfStats(a.stats) {
-				m := metric.Metric{ID: k, MType: "gauge", Value: new(float64)}
+				m := Metric{ID: k, MType: "gauge", Value: new(float64)}
 				*m.Value = v
 				metrics = append(metrics, m)
 			}
 
-			m := metric.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount}
+			m := Metric{ID: "PollCount", MType: "counter", Delta: &pollCount}
 			metrics = append(metrics, m)
 
 			r := client.R().SetBody(metrics).
