@@ -39,8 +39,15 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
 // Гарантируется, что сюда поступают правильные метрики
 func (s Storage) Add(ctx context.Context, m entity.Metric) {
 
+	tx, err := s.conn.BeginTx(ctx, nil)
+	if err != nil {
+		s.log.Errorf("can't use transaction: %v", err)
+		return
+	}
+	defer tx.Rollback()
+
 	// проверяем существование метрики в хранилище
-	inStore, err := s.sqlElementExist(ctx, m)
+	inStore, err := sqlElementExist(ctx, tx, m)
 	if err != nil {
 		s.log.Errorf("can't check element's existing: %v", err)
 		return
@@ -51,14 +58,7 @@ func (s Storage) Add(ctx context.Context, m entity.Metric) {
 		case "counter":
 
 			// по ТЗ нам нужно вернуть обновленное значение метрики, поэтому после обновления
-			// вытаскиваем второй раз ее из хранилища. Чтобы эти операции происходили слитно и если что
-			// откатились, используем транзакции
-			tx, err := s.conn.BeginTx(ctx, nil)
-			if err != nil {
-				s.log.Errorf("can't use transaction: %v", err)
-				return
-			}
-			defer tx.Rollback()
+			// вытаскиваем второй раз ее из хранилища.
 
 			// считываем предыдущее значение метрики
 			prev, err := sqlGetDelta(ctx, m, tx)
@@ -168,8 +168,8 @@ func (s Storage) sqlCreateTable() error {
 	return err
 }
 
-func (s Storage) sqlElementExist(ctx context.Context, m entity.Metric) (bool, error) {
-	row := s.conn.QueryRowContext(ctx,
+func sqlElementExist(ctx context.Context, tx *sql.Tx, m entity.Metric) (bool, error) {
+	row := tx.QueryRowContext(ctx,
 		`SELECT EXISTS (SELECT * FROM metrics WHERE id = $1 AND mtype = $2)`,
 		m.ID, m.MType)
 
