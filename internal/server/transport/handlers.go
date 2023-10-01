@@ -1,4 +1,4 @@
-package handler
+package transport
 
 import (
 	"encoding/json"
@@ -169,17 +169,10 @@ func (mux *Mux) updates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, m := range metrics {
-
 		if (m.MType == "counter" && m.Delta == nil) || (m.MType == "gauge" && m.Value == nil) {
 			mux.log.Errorf("empty delta or value in request")
 			continue
 		}
-
-		if m.MType == "counter" {
-			fmt.Println("updates", m.ID, m.MType, *m.Delta, m.Value)
-		}
-
-		fmt.Println(m.ID, m.MType, m.Delta, m.Value)
 
 		mux.storage.Add(r.Context(), m)
 	}

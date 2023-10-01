@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/Kreg101/metrics/internal/entity"
 	"github.com/go-resty/resty/v2"
 	"math/rand"
 	"runtime"
@@ -63,7 +62,7 @@ func getMapOfStats(stats runtime.MemStats) map[string]float64 {
 	return res
 }
 
-func (a *Agent) hash(m []entity.Metric) (string, error) {
+func (a *Agent) hash(m []Metric) (string, error) {
 	b, err := json.Marshal(m)
 	if err != nil {
 		return "", err
@@ -85,15 +84,15 @@ func (a *Agent) Start() {
 
 	go func() {
 		for range time.Tick(a.sendFreq) {
-			var metrics []entity.Metric
+			var metrics []Metric
 
 			for k, v := range getMapOfStats(a.stats) {
-				m := entity.Metric{ID: k, MType: "gauge", Value: new(float64)}
+				m := Metric{ID: k, MType: "gauge", Value: new(float64)}
 				*m.Value = v
 				metrics = append(metrics, m)
 			}
 
-			m := entity.Metric{ID: "PollCount", MType: "counter", Delta: &pollCount}
+			m := Metric{ID: "PollCount", MType: "counter", Delta: &pollCount}
 			metrics = append(metrics, m)
 
 			r := client.R().SetBody(metrics).

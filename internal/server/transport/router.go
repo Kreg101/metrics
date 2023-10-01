@@ -1,9 +1,9 @@
-package handler
+package transport
 
 import (
 	"context"
 	"github.com/Kreg101/metrics/internal/entity"
-	"github.com/Kreg101/metrics/internal/server/logger"
+	"github.com/Kreg101/metrics/pkg/logger"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
@@ -15,14 +15,14 @@ type Repository interface {
 	Ping(ctx context.Context) error
 }
 
-// Mux - структура для соединение http запроса и хранилища
+// Mux - структура для соединение transport запроса и хранилища
 type Mux struct {
 	storage Repository
 	log     *zap.SugaredLogger
 	key     string
 }
 
-func NewMux(storage Repository, log *zap.SugaredLogger, key string) *Mux {
+func New(storage Repository, log *zap.SugaredLogger, key string) *Mux {
 	mux := &Mux{storage: storage}
 
 	if log == nil {

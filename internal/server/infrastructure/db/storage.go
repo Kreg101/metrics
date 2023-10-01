@@ -4,14 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"github.com/Kreg101/metrics/internal/entity"
-	"github.com/Kreg101/metrics/internal/server/logger"
+	"github.com/Kreg101/metrics/pkg/logger"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 	"time"
 )
 
 // Storage структура для работы с базой данных. Содержит в себе соединение и логер.
-// Реализует интерфейс handler.Repository
+// Реализует интерфейс transport.Repository
 type Storage struct {
 	conn *sql.DB
 	log  *zap.SugaredLogger

@@ -1,12 +1,12 @@
-package handler
+package transport
 
 import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"github.com/Kreg101/metrics/internal/entity"
-	"github.com/Kreg101/metrics/internal/server/inmemstore"
-	"github.com/Kreg101/metrics/internal/server/logger"
+	"github.com/Kreg101/metrics/internal/server/infrastructure/inmemstore"
+	"github.com/Kreg101/metrics/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-func TestNewMux(t *testing.T) {
+func TestNew(t *testing.T) {
 	tt := []struct {
 		name     string
 		param    Repository
@@ -34,7 +34,7 @@ func TestNewMux(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mux := NewMux(tc.param, nil, "")
+			mux := New(tc.param, nil, "")
 			assert.Equal(t, tc.expected, mux)
 		})
 	}
@@ -95,7 +95,7 @@ func TestMux_Router(t *testing.T) {
 	s, err := inmemstore.NewInMemStorage("", 0, false, nil)
 	require.NoError(t, err)
 
-	mux := NewMux(s, nil, "")
+	mux := New(s, nil, "")
 	ts := httptest.NewServer(mux.Router())
 	defer ts.Close()
 	type response struct {

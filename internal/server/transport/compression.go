@@ -1,4 +1,4 @@
-package handler
+package transport
 
 import (
 	"compress/gzip"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// compressWriter реализует интерфейс http.ResponseWriter и позволяет
+// compressWriter реализует интерфейс transport.ResponseWriter и позволяет
 // сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
 	w  http.ResponseWriter

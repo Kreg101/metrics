@@ -3,7 +3,7 @@ package inmemstore
 import (
 	"context"
 	"github.com/Kreg101/metrics/internal/entity"
-	"github.com/Kreg101/metrics/internal/server/logger"
+	"github.com/Kreg101/metrics/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
