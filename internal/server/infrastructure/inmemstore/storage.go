@@ -3,7 +3,7 @@ package inmemstore
 import (
 	"context"
 	"encoding/json"
-	"github.com/Kreg101/metrics/internal/entity"
+	"github.com/Kreg101/metrics/internal/server/entity"
 	"github.com/Kreg101/metrics/pkg/logger"
 	"go.uber.org/zap"
 	"os"

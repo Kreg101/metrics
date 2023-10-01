@@ -1,0 +1,25 @@
+{"level":"info","message":"uri / method GET status 0 duration 124.058µs size 23"}
+{"level":"info","message":"uri /update/counter/x/10 method POST status 200 duration 127.455µs size 23"}
+{"level":"info","message":"uri /update/gauge/y/1.23 method POST status 200 duration 432.871µs size 23"}
+{"level":"error","message":"empty entity name"}
+{"level":"info","message":"uri /update/counter//10 method POST status 404 duration 258.896µs size 23"}
+{"level":"error","message":"can't parse abc in double"}
+{"level":"info","message":"uri /update/counter/x/abc method POST status 400 duration 257.664µs size 23"}
+{"level":"error","message":"can't parse abc in double"}
+{"level":"info","message":"uri /update/counter/x/abc method POST status 400 duration 388.576µs size 23"}
+{"level":"info","message":"wrong entity type: counte"}
+{"level":"info","message":"uri /update/counte/x/abc method POST status 400 duration 234.63µs size 23"}
+{"level":"info","message":"uri /value/counter/x method GET status 0 duration 135.189µs size 26"}
+{"level":"info","message":"no entity x and type cor in inmemstore"}
+{"level":"info","message":"uri /value/cor/x method GET status 404 duration 529.165µs size 23"}
+{"level":"info","message":"no entity z and type counter in inmemstore"}
+{"level":"info","message":"uri /value/counter/z method GET status 404 duration 259.277µs size 23"}
+{"level":"info","message":"uri /update/ method POST status 0 duration 1.223666ms size 65"}
+{"level":"info","message":"uri /update/ method POST status 0 duration 155.098µs size 67"}
+{"level":"error","message":"empty delta or value in request"}
+{"level":"info","message":"uri /update/ method POST status 400 duration 173.202µs size 23"}
+{"level":"error","message":"empty delta or value in request"}
+{"level":"info","message":"uri /update/ method POST status 400 duration 494.298µs size 23"}
+{"level":"info","message":"uri /value/ method POST status 0 duration 144.277µs size 67"}
+{"level":"info","message":"no ke entity in storage"}
+{"level":"info","message":"uri /value/ method POST status 404 duration 130.761µs size 23"}

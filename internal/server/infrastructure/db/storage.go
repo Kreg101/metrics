@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
-	"github.com/Kreg101/metrics/internal/entity"
+	"github.com/Kreg101/metrics/internal/server/entity"
 	"github.com/Kreg101/metrics/pkg/logger"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"

@@ -2,11 +2,18 @@ package transport
 
 import (
 	"context"
-	"github.com/Kreg101/metrics/internal/entity"
+	"github.com/Kreg101/metrics/internal/server/entity"
 	"github.com/Kreg101/metrics/pkg/logger"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
+
+type Logic interface {
+	AddMetric(ctx context.Context, metric entity.Metric) error
+	GetMetric(ctx context.Context, metric entity.Metric) (entity.Metric, error)
+	GetAllMetrics(ctx context.Context, metrics entity.Metrics) (entity.Metrics, error)
+	Ping(ctx context.Context) error
+}
 
 type Repository interface {
 	Add(ctx context.Context, m entity.Metric)
@@ -15,7 +22,7 @@ type Repository interface {
 	Ping(ctx context.Context) error
 }
 
-// Mux - структура для соединение transport запроса и хранилища
+// Mux - структура для соединения запроса и хранилища
 type Mux struct {
 	storage Repository
 	log     *zap.SugaredLogger
@@ -39,12 +46,14 @@ func New(storage Repository, log *zap.SugaredLogger, key string) *Mux {
 // Router настроит роутер хэндлерами из handlers
 func (mux *Mux) Router() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/", logging(compression(mux.mainPage)))
+
+	router.Get("/", logging(compression(mux.getMetrics)))
 	router.Get("/ping", mux.ping)
-	router.Get("/value/{type}/{name}", logging(compression(mux.metricPage)))
-	router.Post("/update/{type}/{name}/{value}", logging(compression(mux.updateMetric)))
-	router.Post("/update/", mux.check(logging(compression(mux.updateMetricWithBody))))
-	router.Post("/value/", mux.check(logging(compression(mux.getMetric))))
-	router.Post("/updates/", mux.check(logging(compression(mux.updates))))
+	router.Get("/value/{type}/{name}", logging(compression(mux.getMetric1)))
+	router.Post("/update/{type}/{name}/{value}", logging(compression(mux.updateMetric1)))
+	router.Post("/update/", mux.check(logging(compression(mux.updateMetric2))))
+	router.Post("/value/", mux.check(logging(compression(mux.getMetric2))))
+	router.Post("/updates/", mux.check(logging(compression(mux.updateMetrics))))
+
 	return router
 }

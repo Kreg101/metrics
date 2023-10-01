@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"github.com/Kreg101/metrics/internal/entity"
+	"github.com/Kreg101/metrics/internal/server/entity"
 	"github.com/Kreg101/metrics/internal/server/infrastructure/inmemstore"
 	"github.com/Kreg101/metrics/pkg/logger"
 	"github.com/stretchr/testify/assert"

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/Kreg101/metrics/internal/entity"
+	"github.com/Kreg101/metrics/internal/server/entity"
 	"io"
 	"os"
 )
