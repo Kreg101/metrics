@@ -184,7 +184,7 @@ func sqlElementExist(ctx context.Context, tx *sql.Tx, m entity.Metric) (bool, er
 
 func sqlUpdateDelta(ctx context.Context, m entity.Metric, tx *sql.Tx) (int64, error) {
 	row := tx.QueryRowContext(ctx,
-		`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3 RETURNING delta`,
+		`UPDATE metrics SET delta = delta + $1 WHERE id = $2 AND mtype = $3 RETURNING delta`,
 		m.Delta, m.ID, m.MType)
 
 	var newDelta int64
