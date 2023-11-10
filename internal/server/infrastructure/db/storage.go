@@ -39,62 +39,48 @@ func NewStorage(conn *sql.DB, log *zap.SugaredLogger) (Storage, error) {
 // Гарантируется, что сюда поступают правильные метрики
 func (s Storage) Add(ctx context.Context, m entity.Metric) {
 
+	tx, err := s.conn.BeginTx(ctx, nil)
+	if err != nil {
+		s.log.Errorf("can't use transaction: %v", err)
+		return
+	}
+	defer tx.Rollback()
+
 	// проверяем существование метрики в хранилище
-	inStore, err := s.sqlElementExist(ctx, m)
+	inStore, err := sqlElementExist(ctx, tx, m)
 	if err != nil {
 		s.log.Errorf("can't check element's existing: %v", err)
 		return
 	}
 
 	if inStore {
+
 		switch m.MType {
+
 		case "counter":
-
-			// по ТЗ нам нужно вернуть обновленное значение метрики, поэтому после обновления
-			// вытаскиваем второй раз ее из хранилища. Чтобы эти операции происходили слитно и если что
-			// откатились, используем транзакции
-			tx, err := s.conn.BeginTx(ctx, nil)
-			if err != nil {
-				s.log.Errorf("can't use transaction: %v", err)
-				return
-			}
-			defer tx.Rollback()
-
-			// считываем предыдущее значение метрики
-			prev, err := sqlGetDelta(ctx, m, tx)
-			if err != nil {
-				s.log.Errorf("can't get delta entity from storage: %v", err)
-				return
-			}
-
-			// обновляем текущую
-			*m.Delta += prev
-
-			// обновляем ее в бд
-			err = sqlUpdateDelta(ctx, m, tx)
+			*m.Delta, err = sqlUpdateDelta(ctx, m, tx)
 			if err != nil {
 				s.log.Errorf("can't update delta entity: %v", err)
 				return
 			}
 
-			// завершаем транзакцию
-			err = tx.Commit()
-			if err != nil {
-				s.log.Errorf("can't commit transaction: %v", err)
-			}
-
 		case "gauge":
-
-			err = s.sqlUpdateValue(ctx, m)
+			err = sqlUpdateValue(ctx, tx, m)
 			if err != nil {
 				s.log.Errorf("can't update value entity: %v", err)
 			}
 		}
 	} else {
-		err = s.sqlInsert(ctx, m)
+		err = sqlInsert(ctx, tx, m)
 		if err != nil {
 			s.log.Errorf("can't insert entity into storage: %v", err)
 		}
+	}
+
+	// завершаем транзакцию
+	err = tx.Commit()
+	if err != nil {
+		s.log.Errorf("can't commit transaction: %v", err)
 	}
 }
 
@@ -168,8 +154,8 @@ func (s Storage) sqlCreateTable() error {
 	return err
 }
 
-func (s Storage) sqlElementExist(ctx context.Context, m entity.Metric) (bool, error) {
-	row := s.conn.QueryRowContext(ctx,
+func sqlElementExist(ctx context.Context, tx *sql.Tx, m entity.Metric) (bool, error) {
+	row := tx.QueryRowContext(ctx,
 		`SELECT EXISTS (SELECT * FROM metrics WHERE id = $1 AND mtype = $2)`,
 		m.ID, m.MType)
 
@@ -183,37 +169,43 @@ func (s Storage) sqlElementExist(ctx context.Context, m entity.Metric) (bool, er
 	return inStore, nil
 }
 
-func sqlGetDelta(ctx context.Context, m entity.Metric, tx *sql.Tx) (int64, error) {
-	var prev int64
-	row := tx.QueryRowContext(ctx,
-		`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
-		m.ID, m.MType)
+//func sqlGetDelta(ctx context.Context, m entity.Metric, tx *sql.Tx) (int64, error) {
+//	var prev int64
+//	row := tx.QueryRowContext(ctx,
+//		`SELECT delta FROM metrics WHERE $1 = id AND $2 = mtype`,
+//		m.ID, m.MType)
+//
+//	err := row.Scan(&prev)
+//	if err != nil {
+//		return 0, err
+//	}
+//	return prev, nil
+//}
 
-	err := row.Scan(&prev)
+func sqlUpdateDelta(ctx context.Context, m entity.Metric, tx *sql.Tx) (int64, error) {
+	row := tx.QueryRowContext(ctx,
+		`UPDATE metrics SET delta = delta + $1 WHERE id = $2 AND mtype = $3 RETURNING delta`,
+		m.Delta, m.ID, m.MType)
+
+	var newDelta int64
+	err := row.Scan(&newDelta)
 	if err != nil {
 		return 0, err
 	}
-	return prev, nil
+
+	return newDelta, nil
 }
 
-func sqlUpdateDelta(ctx context.Context, m entity.Metric, tx *sql.Tx) error {
+func sqlUpdateValue(ctx context.Context, tx *sql.Tx, m entity.Metric) error {
 	_, err := tx.ExecContext(ctx,
-		`UPDATE metrics SET delta = $1 WHERE id = $2 AND mtype = $3`,
-		m.Delta, m.ID, m.MType)
-
-	return err
-}
-
-func (s Storage) sqlUpdateValue(ctx context.Context, m entity.Metric) error {
-	_, err := s.conn.ExecContext(ctx,
 		`UPDATE metrics SET value = $1 WHERE id = $2 AND mtype = $3`,
 		m.Value, m.ID, m.MType)
 
 	return err
 }
 
-func (s Storage) sqlInsert(ctx context.Context, m entity.Metric) error {
-	_, err := s.conn.ExecContext(ctx,
+func sqlInsert(ctx context.Context, tx *sql.Tx, m entity.Metric) error {
+	_, err := tx.ExecContext(ctx,
 		`INSERT INTO metrics (id, mtype, delta, value) VALUES ($1, $2, $3, $4)`,
 		m.ID, m.MType, m.Delta, m.Value)
 
